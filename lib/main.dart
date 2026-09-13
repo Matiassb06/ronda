@@ -7,6 +7,7 @@ import 'core/config/pantalla_configuracion_faltante.dart';
 import 'core/router/router_ronda.dart';
 import 'core/tema/tema_ronda.dart';
 import 'data/supabase/cliente_supabase.dart';
+import 'l10n/idiomas.dart';
 import 'l10n/textos.dart';
 
 Future<void> main() async {
@@ -37,6 +38,11 @@ class AppRonda extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: TemaRonda.claro,
       darkTheme: TemaRonda.oscuro,
+      // Sin esto, cualquier diálogo de Material que pida localizaciones
+      // (el selector de fecha, el primero) revienta al forzarle español.
+      localizationsDelegates: Idiomas.delegados,
+      supportedLocales: Idiomas.soportados,
+      locale: Idiomas.espanol,
       routerConfig: ref.watch(routerProvider),
     );
   }

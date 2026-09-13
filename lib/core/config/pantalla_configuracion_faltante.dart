@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/idiomas.dart';
 import '../../l10n/textos.dart';
 import '../tema/tema_ronda.dart';
 import 'configuracion_supabase.dart';
@@ -19,6 +20,9 @@ class AppConfiguracionFaltante extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: TemaRonda.claro,
       darkTheme: TemaRonda.oscuro,
+      localizationsDelegates: Idiomas.delegados,
+      supportedLocales: Idiomas.soportados,
+      locale: Idiomas.espanol,
       home: const _PantallaConfiguracionFaltante(),
     );
   }

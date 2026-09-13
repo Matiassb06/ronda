@@ -252,3 +252,20 @@ este proyecto es personal.
 
 - Decision: `tz.setLocalLocation(tz.getLocation('America/Lima'))` fijo. Un
   telefono con la zona mal puesta no deberia mover el dia de cobro de una junta.
+
+## D31. Localizaciones de Material, tras un error que llego al usuario
+
+- Sintoma: tocar "¿Que dia empieza?" al crear una junta mostraba la pantalla roja
+  "No MaterialLocalizations found" en vez del calendario.
+- Causa: se le pasaba `locale: Locale('es')` a `showDatePicker` sin declarar los
+  delegados de localizacion en MaterialApp. Pedirle espanol a un dialogo de
+  Material sin el idioma cargado no lo deja en ingles: lo revienta.
+- Decision: se agrega `flutter_localizations` (paquete del SDK de Flutter, no un
+  tercero, asi que no toca el stack cerrado) y se centraliza en lib/l10n/idiomas.dart.
+- **Lo importante**: el proyecto tenia 98 tests de logica pura y CERO tests de
+  widget. Este fallo vivia justo en ese hueco, en el armado de la app. Se
+  agregaron 7 tests de widget sobre la pantalla de crear junta, dos de ellos
+  comprobando que el calendario abre y que sale en espanol.
+- Nota menor: el dialogo del sistema dice "septiembre" (forma de la RAE, la que
+  trae Flutter) mientras los textos propios dicen "setiembre" (uso peruano). Se
+  deja asi: la voz de la app es nuestra, la del dialogo del sistema no.
