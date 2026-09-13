@@ -71,6 +71,7 @@ class Textos {
 
   // Cuaderno
   static const String cobraHoy = 'Le toca cobrar a';
+  static const String cobraEsteTurno = 'cobra este turno';
   static const String turnoDe = 'Turno';
   static const String de = 'de';
   static const String pagaron = 'Pagaron';

@@ -75,7 +75,7 @@ class RepositorioJuntas {
         .from('participantes')
         .select()
         .eq('junta_id', juntaId)
-        .order('orden_turno');
+        .order('orden_turno', ascending: true);
     return filas.map(Participante.desdeMapa).toList();
   }
 
@@ -137,7 +137,7 @@ class RepositorioJuntas {
         .from('turnos')
         .select()
         .eq('junta_id', juntaId)
-        .order('numero');
+        .order('numero', ascending: true);
     return filas.map(Turno.desdeMapa).toList();
   }
 

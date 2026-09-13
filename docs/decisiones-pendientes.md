@@ -106,3 +106,48 @@ tuviera creditos. Estas son las decisiones tomadas en esa sesion.
 
 - Confirma D04. El paquete sigue en el stack pero no se invoca: la tipografia
   es la del sistema. Descargar fuentes exige red, y en el mercado no hay.
+
+## D14. Modelos con mapeo escrito a mano, no freezed
+
+- Contexto: freezed y json_serializable estan en el stack, pero las filas de
+  Postgres vienen en snake_case, con montos en centavos y fechas civiles que no
+  se convierten por zona horaria.
+- Decision: clases Dart simples con `desdeMapa` explicito. Deja esas tres reglas
+  a la vista en vez de esconderlas tras un generador y sus convertidores.
+- freezed sigue en el stack y build_runner sigue configurado: cuando haga falta
+  un modelo con muchas copias inmutables, se usa.
+
+## D15. Todas aportan en cada vuelta, incluida la que cobra
+
+- Contexto: el encargo no dice si la participante que recibe el pozo tambien
+  pone su aporte esa vuelta. Hay juntas que lo hacen de las dos formas.
+- Decision: todas ponen siempre. Es la forma mas comun y la que hace que la
+  cuenta cierre: el pozo es N por el aporte, y la ganancia neta de quien cobra
+  es (N - 1) veces el aporte.
+- Para 12 participantes son 12 turnos y 144 aportes. Se insertan en dos
+  llamadas, no una por una.
+
+## D16. El dia del mes se recuerda, no se arrastra
+
+- Contexto: una junta mensual que empieza un 31 se topa con febrero.
+- Decision: el 31 de enero mas un mes da 28 de febrero, pero mas dos meses
+  vuelve al 31 de marzo. El dia se conserva de la fecha original y solo se
+  recorta cuando el mes no lo tiene. Si se fuera sumando mes a mes sobre el
+  resultado anterior, la junta cobraria el 28 para siempre.
+- Cubierto por tests, incluido el anio bisiesto.
+
+## D17. `.order()` de supabase_flutter es DESCENDENTE por defecto
+
+- Contexto: `.order('orden_turno')` devolvia las participantes al reves. El
+  calendario se habria generado con el orden de cobro invertido.
+- Decision: `ascending: true` explicito en toda consulta ordenada. Encontrado
+  manejando la app, no leyendo el codigo ni corriendo los tests.
+
+## D18. El contraste no se delega al widget
+
+- Contexto: dos veces seguidas un texto salio en gris casi blanco: las opciones
+  de frecuencia (RadioListTile dentro de RadioGroup se pinta deshabilitado) y
+  los nombres de la lista (ListTileThemeData con titleTextStyle sin color).
+- Decision: todo TextStyle de tema lleva su color explicito del ColorScheme, y
+  la barra de progreso tambien. Esta app se usa con sol encima: si el widget
+  puede elegir un gris, lo va a elegir.

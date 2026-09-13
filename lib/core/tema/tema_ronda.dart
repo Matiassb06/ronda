@@ -66,10 +66,21 @@ class TemaRonda {
           textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
         ),
       ),
-      listTileTheme: const ListTileThemeData(
+      // El color va explícito a propósito. Un TextStyle de tema sin color deja
+      // que el widget elija, y varios eligen un gris clarísimo que sobre este
+      // fondo no se lee. Esta app se usa con sol encima: el contraste no se
+      // delega.
+      listTileTheme: ListTileThemeData(
         minVerticalPadding: 16,
-        titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
-        subtitleTextStyle: TextStyle(fontSize: 17),
+        titleTextStyle: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w500,
+          color: esquema.onSurface,
+        ),
+        subtitleTextStyle: TextStyle(
+          fontSize: 17,
+          color: esquema.onSurfaceVariant,
+        ),
       ),
       checkboxTheme: CheckboxThemeData(
         materialTapTargetSize: MaterialTapTargetSize.padded,

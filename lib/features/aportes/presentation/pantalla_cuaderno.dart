@@ -210,6 +210,11 @@ class _Cabecera extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: resumen.avance,
               minHeight: 12,
+              // Colores explícitos: con los de por defecto, la barra vacía se
+              // pinta oscura sobre este fondo y se lee como si ya estuviera
+              // completa. Justo al revés de lo que pasa.
+              color: tema.colorScheme.primary,
+              backgroundColor: tema.colorScheme.surface,
             ),
           ),
           if (resumen.estaCompleto) ...[
@@ -302,7 +307,7 @@ class _FilaDelCuaderno extends StatelessWidget {
                   ),
                   if (esQuienCobra)
                     Text(
-                      Textos.cobraHoy.toLowerCase(),
+                      Textos.cobraEsteTurno,
                       style: tema.textTheme.bodyMedium?.copyWith(
                         color: tema.colorScheme.primary,
                         fontWeight: FontWeight.w600,
