@@ -1,7 +1,5 @@
 # Ronda
 
-<!-- El repositorio todavia es local: cuando se publique hay que cambiar
-     USUARIO por el propietario real. Ver docs/decisiones-pendientes.md, D05. -->
 [![CI](https://github.com/Matiassb06/ronda/actions/workflows/ci.yml/badge.svg)](https://github.com/Matiassb06/ronda/actions/workflows/ci.yml)
 
 App Android que le reemplaza el cuaderno a la cabeza de una junta.
