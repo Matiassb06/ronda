@@ -156,6 +156,11 @@ class PantallaParticipantes extends ConsumerWidget {
                     : ReorderableListView.builder(
                         padding: const EdgeInsets.only(bottom: 96),
                         itemCount: participantes.length,
+                        // Sin esto, arrastrar exige mantener presionado primero,
+                        // que es un gesto escondido. Se pone un asa visible y se
+                        // arrastra de una, que además deja el toque libre para
+                        // editar.
+                        buildDefaultDragHandles: false,
                         // onReorderItem ya entrega el índice corregido: no hay
                         // que restarle uno cuando el elemento baja en la lista.
                         onReorderItem: (viejo, nuevo) async {
@@ -173,6 +178,7 @@ class PantallaParticipantes extends ConsumerWidget {
                             participante: p,
                             alEditar: () => _editar(context, ref, p),
                             alQuitar: () => _quitar(context, ref, p),
+                            indiceParaArrastrar: i,
                           );
                         },
                       ),
@@ -214,6 +220,7 @@ class _Fila extends StatelessWidget {
     required this.participante,
     required this.alEditar,
     required this.alQuitar,
+    this.indiceParaArrastrar,
     super.key,
   });
 
@@ -223,6 +230,9 @@ class _Fila extends StatelessWidget {
 
   /// Null cuando la junta ya empezó: la lista está congelada.
   final VoidCallback? alQuitar;
+
+  /// Null cuando no se puede reordenar. Con valor, dibuja el asa de arrastre.
+  final int? indiceParaArrastrar;
 
   @override
   Widget build(BuildContext context) {
@@ -244,13 +254,27 @@ class _Fila extends StatelessWidget {
             ? null
             : TextStyle(color: Theme.of(context).colorScheme.error),
       ),
-      trailing: alQuitar == null
-          ? const Icon(Icons.edit_outlined, size: 24)
-          : IconButton(
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (alQuitar == null)
+            const Icon(Icons.edit_outlined, size: 24)
+          else
+            IconButton(
               tooltip: Textos.quitarParticipante,
               icon: const Icon(Icons.close),
               onPressed: alQuitar,
             ),
+          if (indiceParaArrastrar != null)
+            ReorderableDragStartListener(
+              index: indiceParaArrastrar!,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                child: Icon(Icons.drag_handle, size: 30),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

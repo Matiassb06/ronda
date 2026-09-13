@@ -66,7 +66,7 @@ class Textos {
       'Agrega a las personas de tu junta.\nDespués podrás cambiar el orden.';
   static const String ordenDeCobro = 'Orden en que cobran';
   static const String arrastraParaOrdenar =
-      'Mantén y arrastra para cambiar el orden';
+      'Arrastra desde las rayitas para cambiar el orden';
   static const String empezarJunta = 'Empezar la junta';
   static const String quitarParticipante = 'Quitar';
 

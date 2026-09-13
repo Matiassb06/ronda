@@ -402,3 +402,12 @@ Leonardo comento que "si elijo semanal, el deposito es cada semana", lo que
 podria significar que espera otra cosa: una junta que dure un numero de semanas
 elegido aparte, independiente de cuanta gente haya. Eso seria otro producto y
 cambiaria el modelo de datos. Hay que preguntarselo antes de tocar nada.
+
+## D47. Asa visible para reordenar, en vez de manten-y-arrastra
+
+- **Reportado por Leonardo: no dejaba arrastrar.** `ReorderableListView` en movil
+  exige mantener presionado y despues arrastrar. Es un gesto escondido: si no lo
+  sabes, la lista parece rota.
+- Decision: `buildDefaultDragHandles: false` y un asa de rayitas visible en cada
+  fila, que arrastra de inmediato. El texto de ayuda ahora dice de donde agarrar.
+- De paso deja el toque libre para editar, sin competir con el gesto de arrastre.
