@@ -259,6 +259,115 @@ void main() {
     });
   });
 
+  group('la duración se elige aparte de cuánta gente hay', () {
+    final gente = ['rosa', 'maria', 'julia', 'elena'];
+
+    test('sin decir nada, un turno por participante', () {
+      final turnos = CalendarioTurnos.generar(
+        participantesIdsEnOrden: gente,
+        frecuencia: Frecuencia.semanal,
+        fechaInicio: DateTime(2026, 9, 14),
+      );
+      expect(turnos, hasLength(4));
+      expect(turnos.map((t) => t.participanteId), gente);
+    });
+
+    test('mas turnos que gente: se da la vuelta a la lista', () {
+      final turnos = CalendarioTurnos.generar(
+        participantesIdsEnOrden: gente,
+        frecuencia: Frecuencia.semanal,
+        fechaInicio: DateTime(2026, 9, 14),
+        cuantosTurnos: 6,
+      );
+
+      expect(turnos, hasLength(6));
+      expect(turnos.map((t) => t.participanteId), [
+        'rosa',
+        'maria',
+        'julia',
+        'elena',
+        'rosa',
+        'maria',
+      ]);
+      // Las fechas siguen corriendo, no vuelven al principio.
+      expect(soloDia(turnos.last.fechaProgramada), '2026-10-19');
+    });
+
+    test('menos turnos que gente: alguien no cobra', () {
+      final turnos = CalendarioTurnos.generar(
+        participantesIdsEnOrden: gente,
+        frecuencia: Frecuencia.semanal,
+        fechaInicio: DateTime(2026, 9, 14),
+        cuantosTurnos: 2,
+      );
+      expect(turnos, hasLength(2));
+      expect(turnos.map((t) => t.participanteId), ['rosa', 'maria']);
+    });
+
+    test('una junta semanal larga con poca gente', () {
+      final turnos = CalendarioTurnos.generar(
+        participantesIdsEnOrden: ['rosa', 'maria'],
+        frecuencia: Frecuencia.semanal,
+        fechaInicio: DateTime(2026, 9, 14),
+        cuantosTurnos: 20,
+      );
+      expect(turnos, hasLength(20));
+      // 19 semanas después del 14 de setiembre.
+      expect(soloDia(turnos.last.fechaProgramada), '2027-01-25');
+    });
+
+    test('cero turnos es un error', () {
+      expect(
+        () => CalendarioTurnos.generar(
+          participantesIdsEnOrden: gente,
+          frecuencia: Frecuencia.semanal,
+          fechaInicio: DateTime(2026, 9, 14),
+          cuantosTurnos: 0,
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  group('el aviso del reparto, antes de generar nada', () {
+    test('parejo: nadie cobra de mas ni de menos', () {
+      final r = CalendarioTurnos.repartoDeCobros(participantes: 4, turnos: 4);
+      expect(r.esParejo, isTrue);
+      expect(r.hayQueAvisar, isFalse);
+      expect(r.cobranDeMas, 0);
+      expect(r.alguienNoCobra, isFalse);
+    });
+
+    test('seis turnos entre cuatro: dos cobran dos veces', () {
+      final r = CalendarioTurnos.repartoDeCobros(participantes: 4, turnos: 6);
+      expect(r.hayQueAvisar, isTrue);
+      expect(r.vecesQueCobraLaMayoria, 1);
+      expect(r.cobranDeMas, 2);
+      expect(r.alguienNoCobra, isFalse);
+    });
+
+    test('veinte turnos entre dos: cada una cobra diez veces', () {
+      final r = CalendarioTurnos.repartoDeCobros(participantes: 2, turnos: 20);
+      expect(r.vecesQueCobraLaMayoria, 10);
+      expect(r.cobranDeMas, 0);
+      expect(r.hayQueAvisar, isTrue, reason: 'no es una vuelta limpia');
+    });
+
+    // Lo mas grave que puede pasar aqui.
+    test('menos turnos que gente: se avisa que alguien NO cobra', () {
+      final r = CalendarioTurnos.repartoDeCobros(participantes: 4, turnos: 3);
+      expect(r.alguienNoCobra, isTrue);
+      expect(r.sinCobrar, 1);
+      expect(r.vecesQueCobraLaMayoria, 0);
+    });
+
+    test('la mitad de la gente se queda sin cobrar', () {
+      final r = CalendarioTurnos.repartoDeCobros(participantes: 12, turnos: 6);
+      expect(r.sinCobrar, 6);
+      expect(r.alguienNoCobra, isTrue);
+    });
+  });
+
   group('CalendarioTurnos, dinero y cierre', () {
     test('el pozo es el aporte por la cantidad de participantes', () {
       expect(
@@ -274,7 +383,7 @@ void main() {
       expect(
         soloDia(
           CalendarioTurnos.fechaDeCierre(
-            participantes: 12,
+            turnos: 12,
             frecuencia: Frecuencia.mensual,
             fechaInicio: DateTime(2026, 9, 15),
           ),

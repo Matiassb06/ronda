@@ -411,3 +411,41 @@ cambiaria el modelo de datos. Hay que preguntarselo antes de tocar nada.
 - Decision: `buildDefaultDragHandles: false` y un asa de rayitas visible en cada
   fila, que arrastra de inmediato. El texto de ayuda ahora dice de donde agarrar.
 - De paso deja el toque libre para editar, sin competir con el gesto de arrastre.
+
+---
+
+# D46 RESUELTA: la duracion se elige aparte
+
+Leonardo lo confirmo: **la duracion de la junta es independiente de cuanta gente
+haya.** Una junta semanal puede durar veinte semanas con diez personas.
+
+## Que cambio
+
+- `CalendarioTurnos.generar` acepta `cuantosTurnos`. Si no se dice, sigue siendo
+  uno por participante, que es el caso clasico.
+- Cuando hay mas turnos que gente, el reparto **da la vuelta a la lista**: con 4
+  personas y 6 turnos, las dos primeras cobran dos veces.
+- **Migracion 0002 en Supabase**: habia una restriccion `unique (junta_id,
+  participante_id)` en turnos que prohibia justamente eso. Se elimina. Sin
+  ejecutarla, las juntas con mas turnos que gente se crean en el telefono y el
+  servidor las rechaza.
+
+## La consecuencia, dicha en la cara antes de generar nada
+
+La cuenta de una junta sale a mano solo cuando turnos == participantes. Fuera de
+ahi, o alguien cobra de mas o alguien no cobra. La hoja de duracion lo dice con
+tres avisos distintos y **ninguno bloquea**: la cabeza de junta sabe lo que hace
+y estos repartos existen de verdad. Pero verlo en la semana cinco es lo que
+rompe una junta.
+
+- Parejo (verde): "Cada una cobra una vez. La cuenta sale a mano."
+- Mas turnos (azul): "N participantes cobran una vez mas. Pasa cuando alguien
+  toma mas de un numero: paga doble y cobra doble."
+- Menos turnos (rojo): "N participantes no cobrarian. Quien no cobre va a poner
+  dinero sin recibir nunca su vuelta."
+
+## Detalle de lenguaje
+
+La duracion se pregunta en la unidad de la frecuencia: "Cuantas semanas",
+"Cuantas quincenas", "Cuantos meses". Nadie dice "doce turnos" en un mercado,
+dice "doce semanas".

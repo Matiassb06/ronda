@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../data/repositorio_juntas.dart';
 import '../../../l10n/textos.dart';
 import '../../juntas/application/juntas.dart';
+import '../../juntas/presentation/hoja_duracion.dart';
 import '../domain/participante.dart';
 
 /// Lista de participantes, con el orden en que van a cobrar.
@@ -83,9 +84,32 @@ class PantallaParticipantes extends ConsumerWidget {
     }
   }
 
-  Future<void> _empezar(BuildContext context, WidgetRef ref) async {
+  Future<void> _empezar(
+    BuildContext context,
+    WidgetRef ref,
+    List<Participante> participantes,
+  ) async {
+    final junta = ref.read(juntaProvider(juntaId)).value;
+    if (junta == null) return;
+
+    // La duración se pregunta aquí porque aquí ya se sabe cuánta gente hay, y
+    // se elige aparte: no tiene por qué coincidir con la cantidad de personas.
+    final turnos = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => HojaDuracion(
+        participantes: participantes.length,
+        frecuencia: junta.frecuencia,
+        fechaInicio: junta.fechaInicio,
+        montoAporteCentavos: junta.montoAporteCentavos,
+      ),
+    );
+    if (turnos == null || !context.mounted) return;
+
     try {
-      await ref.read(repositorioJuntasProvider).generarCalendario(juntaId);
+      await ref
+          .read(repositorioJuntasProvider)
+          .generarCalendario(juntaId, cuantosTurnos: turnos);
       if (!context.mounted) return;
       context.go('/junta/$juntaId');
     } catch (_) {
@@ -197,7 +221,8 @@ class PantallaParticipantes extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: FilledButton.icon(
-                  onPressed: () => _empezar(context, ref),
+                  onPressed: () =>
+                      _empezar(context, ref, lista.value ?? const []),
                   icon: const Icon(Icons.play_arrow),
                   label: const Text(Textos.empezarJunta),
                 ),

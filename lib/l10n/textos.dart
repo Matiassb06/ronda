@@ -156,6 +156,26 @@ class Textos {
   static const String entregarSinCobrarTodoDetalle =
       'El turno se cierra y pasa al siguiente. Lo que falta queda como deuda y se sigue viendo en el historial.';
   static const String entregarIgual = 'Cerrar igual';
+
+  // Duración de la junta
+  static const String cuantoDuraLaJunta = '¿Cuánto dura la junta?';
+  static const String participante = 'participante';
+  static const String participantesEnLaJunta = 'participantes';
+  static const String duracionInvalida = 'Tiene que ser al menos 1';
+  static const String terminaEl = 'Termina el';
+  static const String repartoParejo = 'Cada una cobra una vez';
+  static const String repartoParejoDetalle =
+      'La cuenta sale a mano: todas ponen lo mismo y todas cobran su vuelta.';
+  static const String unaNoCobra = 'Una participante no cobraría';
+  static const String variasNoCobran = 'participantes no cobrarían';
+  static const String noCobranDetalle =
+      'Hay menos turnos que gente. Quien no cobre va a poner dinero sin recibir nunca su vuelta. Conviene hablarlo antes de empezar.';
+  static const String cadaUnaCobra = 'Cada una cobra';
+  static const String veces = 'veces';
+  static const String cobraUnaVezMas = 'participante cobra una vez más';
+  static const String cobranUnaVezMas = 'participantes cobran una vez más';
+  static const String cobrarDeMasDetalle =
+      'Pasa cuando alguien toma más de un número: paga doble y cobra doble. Asegúrate de que todas lo sepan.';
   static const String paraQueSirveElTelefono =
       'Para abrirle el chat de WhatsApp con el recordatorio';
   static const String cancelar = 'Cancelar';

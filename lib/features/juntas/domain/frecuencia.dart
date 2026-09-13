@@ -18,6 +18,16 @@ enum Frecuencia {
   /// Como se le muestra a la cabeza de junta.
   final String etiqueta;
 
+  /// Como se pregunta la duracion: "Cuantas semanas", "Cuantos meses".
+  ///
+  /// La duracion se mide en la unidad de la frecuencia, que es como se habla
+  /// de una junta: nadie dice "doce turnos", dice "doce semanas".
+  String get etiquetaDeDuracion => switch (this) {
+    Frecuencia.semanal => '¿Cuántas semanas?',
+    Frecuencia.quincenal => '¿Cuántas quincenas?',
+    Frecuencia.mensual => '¿Cuántos meses?',
+  };
+
   static Frecuencia desdeBase(String valor) {
     return Frecuencia.values.firstWhere(
       (f) => f.valorEnBase == valor,

@@ -358,7 +358,7 @@ class RepositorioJuntas {
   /// múltiples, no como doscientas filas sueltas: para doce participantes son
   /// 12 turnos y 144 aportes, y una cola con 156 entradas tardaría una eternidad
   /// en vaciarse fila por fila.
-  Future<void> generarCalendario(String juntaId) async {
+  Future<void> generarCalendario(String juntaId, {int? cuantosTurnos}) async {
     final filaJunta = await _local.leerJunta(juntaId);
     if (filaJunta == null) throw StateError('Esa junta no está en el teléfono');
     final junta = _aJunta(filaJunta);
@@ -375,6 +375,7 @@ class RepositorioJuntas {
       participantesIdsEnOrden: participantes.map((p) => p.id).toList(),
       frecuencia: junta.frecuencia,
       fechaInicio: junta.fechaInicio,
+      cuantosTurnos: cuantosTurnos,
     );
 
     final ahora = DateTime.now();
