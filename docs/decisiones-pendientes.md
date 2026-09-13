@@ -151,3 +151,54 @@ tuviera creditos. Estas son las decisiones tomadas en esa sesion.
 - Decision: todo TextStyle de tema lleva su color explicito del ColorScheme, y
   la barra de progreso tambien. Esta app se usa con sol encima: si el widget
   puede elegir un gris, lo va a elegir.
+
+---
+
+# Paso 3: base local y sincronizacion
+
+## D19. El id y el codigo de junta se generan en el telefono
+
+- Contexto: la decision original decia que el codigo de 6 caracteres lo generaba
+  Postgres. Con la base local eso impide crear una junta sin senal, que es
+  justo lo que el piloto del Mercado 10 necesita.
+- Decision: `Ids.uuid()` e `Ids.codigoDeJunta()` los generan en el dispositivo,
+  con el mismo alfabeto de 32 caracteres que usa la funcion de Postgres.
+- Riesgo aceptado: 32^6 son mil millones de combinaciones. Si dos chocaran, el
+  UNIQUE de la base rechaza el segundo y la cola lo reporta tras los intentos
+  maximos. La funcion de Postgres sigue existiendo como red para filas creadas
+  del lado del servidor.
+
+## D20. Primero empujar, despues descargar. Nunca al reves
+
+- Contexto: si la descarga corriera primero, Supabase pisaria los cambios
+  locales que todavia no subieron.
+- Decision: el sincronizador empuja la cola y solo descarga si la cola quedo
+  vacia. Con cambios pendientes no se descarga nada.
+- Es el escenario que arruinaria la app: marcar doce pagos sin senal, que vuelva
+  a medias, y que una descarga los borre. Cubierto por test.
+
+## D21. La cola se corta al primer fallo, con tope de intentos
+
+- Contexto: los cambios dependen unos de otros. Los participantes no pueden
+  subir antes que su junta.
+- Decision: se procesa por orden de llegada y se corta al primer error. Tras 5
+  intentos fallidos un cambio se aparta, porque a esa altura ya no es falta de
+  senal sino un dato que Postgres rechaza, y bloquearia todo lo de atras.
+
+## D22. `insertar` sube como upsert
+
+- Contexto: si la respuesta se pierde pero el INSERT llego, reintentar fallaria
+  por clave duplicada y la cola se atascaria para siempre.
+- Decision: upsert. Una cola de reintentos tiene que ser idempotente.
+
+## D23. Sin deteccion de conectividad, a proposito
+
+- Contexto: `connectivity_plus` no esta en el stack cerrado.
+- Decision: no se pregunta si hay red; se intenta y si falla, la cola espera.
+  Preguntar antes de usar la red es una carrera perdida: la respuesta puede
+  cambiar entre la pregunta y la llamada. Hay un latido cada minuto.
+
+## D24. Al cerrar sesion se borra el espejo local
+
+- El telefono puede pasar a otra persona y la base guarda cuentas de plata
+  ajena. `olvidarTodo()` vacia las cinco tablas y la cola.

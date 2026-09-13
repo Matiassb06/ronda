@@ -20,39 +20,53 @@ class PantallaCuaderno extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final estado = ref.watch(cuadernoProvider(juntaId));
+    // Viene de la base local, así que o está listo o la junta todavía no se
+    // descargó. No hay estado de error de red aquí: eso lo maneja la cola.
+    final cuaderno = ref.watch(cuadernoProvider(juntaId));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(estado.value?.junta.nombre ?? Textos.cargando),
+        title: Text(cuaderno?.junta.nombre ?? Textos.cargando),
+        actions: const [_AvisoPendientes()],
       ),
-      body: estado.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _Error(juntaId: juntaId),
-        data: (cuaderno) => _Contenido(cuaderno: cuaderno),
-      ),
+      body: cuaderno == null
+          ? const Center(child: CircularProgressIndicator())
+          : _Contenido(cuaderno: cuaderno),
     );
   }
 }
 
-class _Error extends ConsumerWidget {
-  const _Error({required this.juntaId});
-  final String juntaId;
+/// Cuántos cambios esperan señal.
+///
+/// No es un error ni una advertencia: la app funciona igual. Es información,
+/// para que la cabeza de junta sepa que lo que marcó está guardado en su
+/// teléfono y todavía no viajó.
+class _AvisoPendientes extends ConsumerWidget {
+  const _AvisoPendientes();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    final pendientes = ref.watch(cambiosPendientesProvider).value ?? 0;
+    if (pendientes == 0) return const SizedBox.shrink();
+
+    final tema = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Row(
         children: [
-          Text(
-            Textos.errorGenerico,
-            style: Theme.of(context).textTheme.bodyLarge,
+          Icon(
+            Icons.cloud_upload_outlined,
+            size: 24,
+            color: tema.colorScheme.outline,
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => ref.invalidate(cuadernoProvider(juntaId)),
-            child: const Text(Textos.reintentar),
+          const SizedBox(width: 6),
+          Text(
+            '$pendientes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: tema.colorScheme.outline,
+            ),
           ),
         ],
       ),
@@ -68,7 +82,6 @@ class _Contenido extends ConsumerWidget {
     await ref
         .read(repositorioJuntasProvider)
         .marcarAporte(aporteId: aporte.id, pagado: !aporte.estaPagado);
-    ref.invalidate(cuadernoProvider(cuaderno.junta.id));
   }
 
   @override
@@ -224,7 +237,6 @@ class _Cabecera extends ConsumerWidget {
                 await ref
                     .read(repositorioJuntasProvider)
                     .completarTurno(turno.id);
-                ref.invalidate(cuadernoProvider(cuaderno.junta.id));
               },
               icon: const Icon(Icons.check_circle_outline),
               label: const Text(Textos.entregarPozo),

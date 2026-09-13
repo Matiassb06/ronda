@@ -32,14 +32,11 @@ class PantallaParticipantes extends ConsumerWidget {
           nombre: datos.nombre,
           telefono: datos.telefono,
         );
-    ref.invalidate(participantesDeJuntaProvider(juntaId));
   }
 
   Future<void> _empezar(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(repositorioJuntasProvider).generarCalendario(juntaId);
-      ref.invalidate(cuadernoProvider(juntaId));
-      ref.invalidate(listaDeJuntasProvider);
       if (!context.mounted) return;
       context.go('/junta/$juntaId');
     } catch (_) {
@@ -105,7 +102,6 @@ class PantallaParticipantes extends ConsumerWidget {
                     await ref
                         .read(repositorioJuntasProvider)
                         .reordenarParticipantes(copia);
-                    ref.invalidate(participantesDeJuntaProvider(juntaId));
                   },
                   itemBuilder: (context, i) {
                     final p = participantes[i];
@@ -117,7 +113,6 @@ class PantallaParticipantes extends ConsumerWidget {
                         await ref
                             .read(repositorioJuntasProvider)
                             .borrarParticipante(p.id);
-                        ref.invalidate(participantesDeJuntaProvider(juntaId));
                       },
                     );
                   },

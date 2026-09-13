@@ -60,7 +60,6 @@ class _PantallaCrearJuntaState extends ConsumerState<PantallaCrearJunta> {
             frecuencia: _frecuencia,
             fechaInicio: _inicio,
           );
-      ref.invalidate(listaDeJuntasProvider);
       if (!mounted) return;
       // Recién creada no tiene a nadie: el paso siguiente es agregarlas.
       context.go('/junta/${junta.id}/participantes');

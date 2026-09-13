@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../data/supabase/repositorio_juntas.dart';
+import '../../../data/local/base_local.dart';
+import '../../../data/remoto/fuente_remota.dart';
+import '../../../data/repositorio_juntas.dart';
+import '../../../data/sincronizacion/sincronizador.dart';
 import '../../aportes/domain/aporte.dart';
 import '../../auth/application/sesion.dart';
 import '../../participantes/domain/participante.dart';
@@ -8,36 +13,84 @@ import '../domain/junta.dart';
 
 part 'juntas.g.dart';
 
-@riverpod
-RepositorioJuntas repositorioJuntas(Ref ref) =>
-    RepositorioJuntas(ref.watch(clienteSupabaseProvider));
-
-/// Las juntas de la cabeza de junta que tiene la sesión abierta.
-@riverpod
-Future<List<Junta>> listaDeJuntas(Ref ref) {
-  return ref.watch(repositorioJuntasProvider).listarJuntas();
+/// La base local vive tanto como la app: se abre una vez y no se cierra.
+@Riverpod(keepAlive: true)
+BaseLocal baseLocal(Ref ref) {
+  final base = BaseLocal();
+  ref.onDispose(base.close);
+  return base;
 }
 
-@riverpod
-Future<Junta> junta(Ref ref, String juntaId) {
-  return ref.watch(repositorioJuntasProvider).obtenerJunta(juntaId);
-}
+@Riverpod(keepAlive: true)
+FuenteRemota fuenteRemota(Ref ref) =>
+    FuenteRemotaSupabase(ref.watch(clienteSupabaseProvider));
 
-@riverpod
-Future<List<Participante>> participantesDeJunta(Ref ref, String juntaId) {
-  return ref.watch(repositorioJuntasProvider).listarParticipantes(juntaId);
-}
+@Riverpod(keepAlive: true)
+Sincronizador sincronizador(Ref ref) => Sincronizador(
+  ref.watch(baseLocalProvider),
+  ref.watch(fuenteRemotaProvider),
+);
 
-@riverpod
-Future<List<Turno>> turnosDeJunta(Ref ref, String juntaId) {
-  return ref.watch(repositorioJuntasProvider).listarTurnos(juntaId);
-}
+@Riverpod(keepAlive: true)
+RepositorioJuntas repositorioJuntas(Ref ref) => RepositorioJuntas(
+  ref.watch(baseLocalProvider),
+  ref.watch(fuenteRemotaProvider),
+  ref.watch(sincronizadorProvider),
+);
 
-/// Todo lo que la pantalla del cuaderno necesita, en una sola pasada.
+/// Cuántos cambios esperan señal. Cero significa que todo está en Supabase.
+@riverpod
+Stream<int> cambiosPendientes(Ref ref) =>
+    ref.watch(repositorioJuntasProvider).verPendientes();
+
+/// Intenta sincronizar al arrancar y cada minuto.
 ///
-/// Se agrupa a propósito: pedir junta, participantes, turno y aportes por
-/// separado dejaría la pantalla parpadeando en cuatro tiempos distintos con la
-/// señal del mercado.
+/// No hay detección de conectividad en el stack a propósito: preguntar si hay
+/// red y después usarla es una carrera perdida de antemano, porque la respuesta
+/// puede cambiar entre la pregunta y la llamada. Se intenta y si falla, la cola
+/// espera. Un minuto es suficiente para que, al salir del mercado a la calle,
+/// lo marcado suba solo sin que nadie haga nada.
+@Riverpod(keepAlive: true)
+class LatidoDeSync extends _$LatidoDeSync {
+  Timer? _reloj;
+
+  @override
+  void build() {
+    final repo = ref.watch(repositorioJuntasProvider);
+    unawaited(repo.sincronizarAhora());
+
+    _reloj = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => unawaited(repo.sincronizarAhora()),
+    );
+    ref.onDispose(() => _reloj?.cancel());
+  }
+}
+
+// Todas las lecturas salen de la base local, así que emiten al instante y sin
+// red. La sincronización solo rellena esa base por detrás.
+
+@riverpod
+Stream<List<Junta>> listaDeJuntas(Ref ref) =>
+    ref.watch(repositorioJuntasProvider).verJuntas();
+
+@riverpod
+Stream<Junta?> junta(Ref ref, String juntaId) =>
+    ref.watch(repositorioJuntasProvider).verJunta(juntaId);
+
+@riverpod
+Stream<List<Participante>> participantesDeJunta(Ref ref, String juntaId) =>
+    ref.watch(repositorioJuntasProvider).verParticipantes(juntaId);
+
+@riverpod
+Stream<List<Turno>> turnosDeJunta(Ref ref, String juntaId) =>
+    ref.watch(repositorioJuntasProvider).verTurnos(juntaId);
+
+@riverpod
+Stream<List<Aporte>> aportesDeJunta(Ref ref, String juntaId) =>
+    ref.watch(repositorioJuntasProvider).verAportes(juntaId);
+
+/// Todo lo que la pantalla del cuaderno necesita, ya combinado.
 class CuadernoDelTurno {
   const CuadernoDelTurno({
     required this.junta,
@@ -80,13 +133,24 @@ class CuadernoDelTurno {
   }
 }
 
+/// Combina los cuatro streams locales en la vista del cuaderno.
+///
+/// Devuelve null mientras falte alguno. No es un provider asíncrono a propósito:
+/// las cuatro fuentes son locales y emiten de inmediato, así que la pantalla no
+/// tiene que mostrar un spinner por cada una.
 @riverpod
-Future<CuadernoDelTurno> cuaderno(Ref ref, String juntaId) async {
-  final repo = ref.watch(repositorioJuntasProvider);
+CuadernoDelTurno? cuaderno(Ref ref, String juntaId) {
+  final junta = ref.watch(juntaProvider(juntaId)).value;
+  final participantes = ref.watch(participantesDeJuntaProvider(juntaId)).value;
+  final turnos = ref.watch(turnosDeJuntaProvider(juntaId)).value;
+  final aportes = ref.watch(aportesDeJuntaProvider(juntaId)).value;
 
-  final junta = await repo.obtenerJunta(juntaId);
-  final participantes = await repo.listarParticipantes(juntaId);
-  final turnos = await repo.listarTurnos(juntaId);
+  if (junta == null ||
+      participantes == null ||
+      turnos == null ||
+      aportes == null) {
+    return null;
+  }
 
   Turno? actual;
   for (final t in turnos) {
@@ -96,10 +160,10 @@ Future<CuadernoDelTurno> cuaderno(Ref ref, String juntaId) async {
     }
   }
 
-  final aportes = <String, Aporte>{};
+  final delTurno = <String, Aporte>{};
   if (actual != null) {
-    for (final a in await repo.aportesDeTurno(actual.id)) {
-      aportes[a.participanteId] = a;
+    for (final a in aportes) {
+      if (a.turnoId == actual.id) delTurno[a.participanteId] = a;
     }
   }
 
@@ -108,6 +172,6 @@ Future<CuadernoDelTurno> cuaderno(Ref ref, String juntaId) async {
     participantes: participantes,
     turnos: turnos,
     turnoActual: actual,
-    aportes: aportes,
+    aportes: delTurno,
   );
 }

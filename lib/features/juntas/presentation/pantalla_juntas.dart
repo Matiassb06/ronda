@@ -18,6 +18,8 @@ class PantallaJuntas extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Enciende el latido de sincronización mientras haya una pantalla viva.
+    ref.watch(latidoDeSyncProvider);
     final juntas = ref.watch(listaDeJuntasProvider);
 
     return Scaffold(
