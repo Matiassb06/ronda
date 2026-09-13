@@ -70,9 +70,13 @@ class Participante {
   }
 
   /// Nueve dígitos exactos, que es como son los celulares en Perú.
-  /// Vacío se acepta: el teléfono es opcional hasta el paso 4.
+  ///
+  /// **Es obligatorio.** Sin número no se le puede mandar el recordatorio, y
+  /// mandar el recordatorio es la mitad del trabajo que esta app le quita de
+  /// encima a la cabeza de junta. Una participante sin celular es una a la que
+  /// hay que ir a buscar al puesto.
   static bool telefonoEsValido(String? texto) {
-    if (texto == null || texto.trim().isEmpty) return true;
+    if (texto == null || texto.trim().isEmpty) return false;
     return RegExp(r'^\d{9}$').hasMatch(texto.replaceAll(RegExp(r'\D'), ''));
   }
 

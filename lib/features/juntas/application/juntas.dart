@@ -111,7 +111,11 @@ class CuadernoDelTurno {
     required this.turnos,
     required this.turnoActual,
     required this.aportes,
+    required this.todosLosAportes,
   });
+
+  /// Todos los aportes de la junta, de todos los turnos.
+  final List<Aporte> todosLosAportes;
 
   final Junta junta;
   final List<Participante> participantes;
@@ -122,6 +126,36 @@ class CuadernoDelTurno {
 
   /// Aportes del turno actual, indexados por participante.
   final Map<String, Aporte> aportes;
+
+  /// Aportes de un turno cualquiera, no solo del actual.
+  ///
+  /// Hace falta para poder mirar y anotar semanas distintas de la que está en
+  /// curso: en una junta semanal el dinero entra cada semana, y si la app solo
+  /// dejara tocar el turno actual, una participante que no pagó bloquearía
+  /// todas las semanas siguientes.
+  Map<String, Aporte> aportesDe(Turno turno) {
+    final todos = <String, Aporte>{};
+    for (final a in todosLosAportes) {
+      if (a.turnoId == turno.id) todos[a.participanteId] = a;
+    }
+    return todos;
+  }
+
+  ResumenDeTurno resumenDe(Turno turno) {
+    return ResumenDeTurno.calcular(
+      aportes: aportesDe(turno).values.toList(),
+      montoAporteCentavos: junta.montoAporteCentavos,
+      fechaProgramada: turno.fechaProgramada,
+      hoy: DateTime.now(),
+    );
+  }
+
+  Participante? quienCobraEn(Turno turno) {
+    for (final p in participantes) {
+      if (p.id == turno.participanteId) return p;
+    }
+    return null;
+  }
 
   bool get tieneCalendario => turnos.isNotEmpty;
   bool get termino => tieneCalendario && turnoActual == null;
@@ -186,6 +220,7 @@ CuadernoDelTurno? cuaderno(Ref ref, String juntaId) {
     turnos: turnos,
     turnoActual: actual,
     aportes: delTurno,
+    todosLosAportes: aportes,
   );
 }
 

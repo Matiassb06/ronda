@@ -372,3 +372,33 @@ esto, un dedo torpe adelantaba la junta entera sin vuelta atras.
   la transaccion: entre la comprobacion inicial y la escritura puede entrar un
   cambio local. Perder un refresco no cuesta nada; pisar un pago marcado cuesta
   la confianza de la cabeza de junta.
+
+## D44. Se puede mirar y anotar cualquier turno, no solo el actual
+
+- **Bug reportado por Leonardo, y el peor de todos hasta ahora.** El cuaderno
+  solo dejaba tocar el turno en curso, y el boton de entregar el pozo solo
+  aparecia con todas pagadas. En una junta semanal eso es fatal: si una no paga,
+  la semana no cierra, no hay donde anotar la siguiente, y la junta queda
+  clavada para siempre.
+- Decision: flechas para moverse entre turnos, y el turno se puede cerrar aunque
+  falte gente, con una confirmacion que dice cuantas faltan y avisa que queda
+  como deuda. Es lo que pasa en una junta de verdad: el pozo se entrega igual y
+  quien debe queda debiendo.
+
+## D45. El celular es obligatorio
+
+- Antes era opcional. Sin numero no se le puede mandar el recordatorio, que es
+  la mitad del trabajo que la app le quita de encima a la cabeza de junta. Una
+  participante sin celular es una a la que hay que ir a buscar al puesto.
+
+## D46. PENDIENTE de confirmar con Leonardo: cuanto dura una junta
+
+En el modelo actual **la cantidad de turnos es la cantidad de participantes**:
+una junta semanal de 4 personas dura 4 semanas, una de 12 dura 12. Es como
+funciona una ROSCA y es lo que hace que la cuenta cierre (cada una pone N veces
+y cobra una).
+
+Leonardo comento que "si elijo semanal, el deposito es cada semana", lo que
+podria significar que espera otra cosa: una junta que dure un numero de semanas
+elegido aparte, independiente de cuanta gente haya. Eso seria otro producto y
+cambiaria el modelo de datos. Hay que preguntarselo antes de tocar nada.

@@ -22,13 +22,28 @@ import 'hoja_de_voucher.dart';
 /// Una lista de nombres con un check al costado, y arriba quién cobra y cuánto
 /// se lleva juntado. Nada más. Se usa con el pulgar, de pie, con sol encima y
 /// una señora esperando enfrente: cada toque tiene que resolver algo.
-class PantallaCuaderno extends ConsumerWidget {
+class PantallaCuaderno extends ConsumerStatefulWidget {
   const PantallaCuaderno({required this.juntaId, super.key});
 
   final String juntaId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PantallaCuaderno> createState() => _PantallaCuadernoState();
+}
+
+class _PantallaCuadernoState extends ConsumerState<PantallaCuaderno> {
+  /// Número del turno que se está mirando. Null significa "el que está en
+  /// curso", que es lo que se quiere al abrir la pantalla.
+  ///
+  /// Poder moverse entre turnos no es un lujo: en una junta semanal el dinero
+  /// entra cada semana, y antes una participante que no pagaba dejaba la app
+  /// clavada en esa semana sin dónde anotar las siguientes.
+  int? _turnoElegido;
+
+  String get juntaId => widget.juntaId;
+
+  @override
+  Widget build(BuildContext context) {
     // Viene de la base local, así que o está listo o la junta todavía no se
     // descargó. No hay estado de error de red aquí: eso lo maneja la cola.
     final cuaderno = ref.watch(cuadernoProvider(juntaId));
@@ -67,7 +82,12 @@ class PantallaCuaderno extends ConsumerWidget {
       ),
       body: cuaderno == null
           ? const Center(child: CircularProgressIndicator())
-          : _Contenido(cuaderno: cuaderno),
+          : _Contenido(
+              cuaderno: cuaderno,
+              turnoElegido: _turnoElegido,
+              alCambiarDeTurno: (numero) =>
+                  setState(() => _turnoElegido = numero),
+            ),
     );
   }
 }
@@ -111,8 +131,30 @@ class _AvisoPendientes extends ConsumerWidget {
 }
 
 class _Contenido extends ConsumerWidget {
-  const _Contenido({required this.cuaderno});
+  const _Contenido({
+    required this.cuaderno,
+    required this.turnoElegido,
+    required this.alCambiarDeTurno,
+  });
+
   final CuadernoDelTurno cuaderno;
+
+  /// Null significa el turno en curso.
+  final int? turnoElegido;
+
+  final void Function(int? numero) alCambiarDeTurno;
+
+  /// El turno que se está mirando: el elegido, o el que está en curso, o el
+  /// último si la junta ya terminó.
+  Turno? get turnoMirado {
+    if (cuaderno.turnos.isEmpty) return null;
+    if (turnoElegido != null) {
+      for (final t in cuaderno.turnos) {
+        if (t.numero == turnoElegido) return t;
+      }
+    }
+    return cuaderno.turnoActual ?? cuaderno.turnos.last;
+  }
 
   /// Abre el chat de WhatsApp con el mensaje ya escrito.
   ///
@@ -123,7 +165,7 @@ class _Contenido extends ConsumerWidget {
     Participante participante,
     Aporte aporte,
   ) async {
-    final turno = cuaderno.turnoActual;
+    final turno = turnoMirado;
     if (turno == null) return;
 
     final texto = Recordatorio.mensaje(
@@ -131,7 +173,7 @@ class _Contenido extends ConsumerWidget {
       nombreJunta: cuaderno.junta.nombre,
       montoCentavos: aporte.montoCentavos,
       fechaDelTurno: turno.fechaProgramada,
-      quienCobra: cuaderno.quienCobra?.nombre,
+      quienCobra: cuaderno.quienCobraEn(turno)?.nombre,
       yaVencio: turno.estaAtrasado(DateTime.now()),
     );
 
@@ -202,18 +244,25 @@ class _Contenido extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!cuaderno.tieneCalendario) {
-      return _Aviso(mensaje: Textos.sinCalendario);
-    }
-    if (cuaderno.termino) {
-      return _Aviso(mensaje: Textos.juntaTerminada);
+      return const _Aviso(mensaje: Textos.sinCalendario);
     }
 
-    final resumen = cuaderno.resumen;
-    final quienCobra = cuaderno.quienCobra;
+    final turno = turnoMirado;
+    if (turno == null) return const _Aviso(mensaje: Textos.sinCalendario);
+
+    final aportes = cuaderno.aportesDe(turno);
+    final resumen = cuaderno.resumenDe(turno);
+    final quienCobra = cuaderno.quienCobraEn(turno);
 
     return Column(
       children: [
-        _Cabecera(cuaderno: cuaderno, quienCobra: quienCobra, resumen: resumen),
+        _Cabecera(
+          cuaderno: cuaderno,
+          turno: turno,
+          quienCobra: quienCobra,
+          resumen: resumen,
+          alCambiarDeTurno: alCambiarDeTurno,
+        ),
         const Divider(height: 1),
         Expanded(
           child: ListView.separated(
@@ -222,7 +271,7 @@ class _Contenido extends ConsumerWidget {
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) {
               final participante = cuaderno.participantes[i];
-              final aporte = cuaderno.aportes[participante.id];
+              final aporte = aportes[participante.id];
               if (aporte == null) return const SizedBox.shrink();
 
               return _FilaDelCuaderno(
@@ -268,18 +317,60 @@ class _Aviso extends StatelessWidget {
 class _Cabecera extends ConsumerWidget {
   const _Cabecera({
     required this.cuaderno,
+    required this.turno,
     required this.quienCobra,
     required this.resumen,
+    required this.alCambiarDeTurno,
   });
 
   final CuadernoDelTurno cuaderno;
+  final Turno turno;
   final Participante? quienCobra;
   final ResumenDeTurno resumen;
+  final void Function(int? numero) alCambiarDeTurno;
+
+  /// Cierra el turno aunque falte gente por pagar.
+  ///
+  /// En una junta real el pozo se entrega igual y quien debe queda debiendo: la
+  /// vida sigue y la semana siguiente también. Antes el botón solo aparecía con
+  /// todo cobrado, así que una sola participante morosa dejaba la junta clavada
+  /// sin forma de anotar las semanas que venían.
+  Future<void> _entregar(BuildContext context, WidgetRef ref) async {
+    if (!resumen.estaCompleto) {
+      final seguir = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text(Textos.entregarSinCobrarTodo),
+          content: Text(
+            '${Textos.faltanPorPagar} ${resumen.faltan}.\n\n'
+            '${Textos.entregarSinCobrarTodoDetalle}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(Textos.cancelar),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(Textos.entregarIgual),
+            ),
+          ],
+        ),
+      );
+      if (seguir != true) return;
+    }
+
+    await ref
+        .read(repositorioJuntasProvider)
+        .completarTurno(turno.id, juntaId: cuaderno.junta.id);
+    alCambiarDeTurno(null);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
-    final turno = cuaderno.turnoActual!;
+    final primero = turno.numero <= 1;
+    final ultimo = turno.numero >= cuaderno.turnos.length;
 
     return Container(
       width: double.infinity,
@@ -290,12 +381,37 @@ class _Cabecera extends ConsumerWidget {
         children: [
           Row(
             children: [
+              // Moverse entre semanas. Sin esto, el cuaderno solo dejaba tocar
+              // el turno en curso.
+              IconButton(
+                tooltip: Textos.turnoAnterior,
+                icon: const Icon(Icons.chevron_left, size: 30),
+                onPressed: primero
+                    ? null
+                    : () => alCambiarDeTurno(turno.numero - 1),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+              ),
               Text(
                 '${Textos.turnoDe} ${turno.numero} ${Textos.de} ${cuaderno.turnos.length}',
                 style: tema.textTheme.bodyMedium,
               ),
+              IconButton(
+                tooltip: Textos.turnoSiguiente,
+                icon: const Icon(Icons.chevron_right, size: 30),
+                onPressed: ultimo
+                    ? null
+                    : () => alCambiarDeTurno(turno.numero + 1),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+              ),
               const Spacer(),
-              if (resumen.estaAtrasado)
+              if (turno.completado)
+                _Etiqueta(
+                  texto: Textos.turnoEntregado,
+                  color: tema.colorScheme.primary,
+                )
+              else if (resumen.estaAtrasado)
                 _Etiqueta(
                   texto:
                       '${Textos.atrasadoPorDias} ${resumen.diasDeAtraso} ${resumen.diasDeAtraso == 1 ? Textos.dia : Textos.dias}',
@@ -372,16 +488,16 @@ class _Cabecera extends ConsumerWidget {
               backgroundColor: tema.colorScheme.surface,
             ),
           ),
-          if (resumen.estaCompleto) ...[
+          if (!turno.completado) ...[
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: () async {
-                await ref
-                    .read(repositorioJuntasProvider)
-                    .completarTurno(turno.id, juntaId: cuaderno.junta.id);
-              },
+              onPressed: () => _entregar(context, ref),
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text(Textos.entregarPozo),
+              label: Text(
+                resumen.estaCompleto
+                    ? Textos.entregarPozo
+                    : Textos.entregarPozoIncompleto,
+              ),
             ),
           ],
         ],

@@ -274,7 +274,7 @@ final class LatidoDeSyncProvider extends $NotifierProvider<LatidoDeSync, void> {
   }
 }
 
-String _$latidoDeSyncHash() => r'9f471c42d52497d5ad407beed98b9f83a662145c';
+String _$latidoDeSyncHash() => r'da6c44f6711c17a14d7797e50fe5a556f2a4717c';
 
 /// Intenta sincronizar al arrancar y cada minuto.
 ///
@@ -767,7 +767,7 @@ final class CuadernoProvider
   }
 }
 
-String _$cuadernoHash() => r'9ce59e2219dc25e355b5c1d7c2f4b1f4d79fba7d';
+String _$cuadernoHash() => r'bc34527b7ad74d63568f13ee4481338cd4f494d6';
 
 /// Combina los cuatro streams locales en la vista del cuaderno.
 ///

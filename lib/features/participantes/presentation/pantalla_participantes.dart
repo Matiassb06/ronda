@@ -154,7 +154,7 @@ class PantallaParticipantes extends ConsumerWidget {
                         ],
                       )
                     : ReorderableListView.builder(
-                        padding: const EdgeInsets.only(bottom: 140),
+                        padding: const EdgeInsets.only(bottom: 96),
                         itemCount: participantes.length,
                         // onReorderItem ya entrega el índice corregido: no hay
                         // que restarle uno cuando el elemento baja en la lista.
@@ -181,27 +181,28 @@ class PantallaParticipantes extends ConsumerWidget {
           );
         },
       ),
+      // "Empezar la junta" va abajo y a todo el ancho, no apilado sobre el
+      // botón flotante: ahí quedaba descentrado y competía con él por la
+      // mirada. Es la acción que cierra esta pantalla, así que se merece su
+      // propio sitio.
+      bottomNavigationBar: (yaEmpezo || (lista.value ?? []).isEmpty)
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: FilledButton.icon(
+                  onPressed: () => _empezar(context, ref),
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text(Textos.empezarJunta),
+                ),
+              ),
+            ),
       floatingActionButton: yaEmpezo
           ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if ((lista.value ?? []).isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: FilledButton.icon(
-                      onPressed: () => _empezar(context, ref),
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text(Textos.empezarJunta),
-                    ),
-                  ),
-                FloatingActionButton.extended(
-                  onPressed: () => _agregar(context, ref),
-                  icon: const Icon(Icons.person_add),
-                  label: const Text(Textos.agregarParticipante),
-                ),
-              ],
+          : FloatingActionButton.extended(
+              onPressed: () => _agregar(context, ref),
+              icon: const Icon(Icons.person_add),
+              label: const Text(Textos.agregarParticipante),
             ),
     );
   }
@@ -324,9 +325,12 @@ class _HojaDeParticipanteState extends State<_HojaDeParticipante> {
                 labelText: Textos.telefonoOpcional,
                 helperText: Textos.paraQueSirveElTelefono,
               ),
-              validator: (v) => Participante.telefonoEsValido(v)
-                  ? null
-                  : Textos.telefonoInvalido,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return Textos.faltaTelefono;
+                return Participante.telefonoEsValido(v)
+                    ? null
+                    : Textos.telefonoInvalido;
+              },
             ),
             const SizedBox(height: 28),
             FilledButton(

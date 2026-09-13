@@ -59,7 +59,8 @@ class Textos {
   static const String participantes = 'Participantes';
   static const String agregarParticipante = 'Agregar';
   static const String nombreDeLaParticipante = 'Nombre';
-  static const String telefonoOpcional = 'Celular (opcional)';
+  static const String telefonoOpcional = 'Celular';
+  static const String faltaTelefono = 'Escribe su celular';
   static const String telefonoInvalido = 'El celular tiene 9 números';
   static const String sinParticipantes =
       'Agrega a las personas de tu junta.\nDespués podrás cambiar el orden.';
@@ -144,6 +145,17 @@ class Textos {
       'La junta ya empezó. Puedes corregir nombres y celulares, pero no cambiar quiénes participan.';
   static const String sinTelefono = 'Sin celular: no se le puede recordar';
   static const String hastaEl = 'Hasta el';
+
+  // Moverse entre turnos
+  static const String turnoAnterior = 'Turno anterior';
+  static const String turnoSiguiente = 'Turno siguiente';
+  static const String turnoEntregado = 'Entregado';
+  static const String entregarPozoIncompleto = 'Cerrar este turno';
+  static const String entregarSinCobrarTodo = '¿Cerrar sin cobrar todo?';
+  static const String faltanPorPagar = 'Todavía faltan por pagar:';
+  static const String entregarSinCobrarTodoDetalle =
+      'El turno se cierra y pasa al siguiente. Lo que falta queda como deuda y se sigue viendo en el historial.';
+  static const String entregarIgual = 'Cerrar igual';
   static const String paraQueSirveElTelefono =
       'Para abrirle el chat de WhatsApp con el recordatorio';
   static const String cancelar = 'Cancelar';
