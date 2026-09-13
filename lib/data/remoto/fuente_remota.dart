@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Lo que el sincronizador necesita del otro lado de la red.
@@ -19,6 +21,13 @@ abstract interface class FuenteRemota {
     required String operacion,
     required String filaId,
     required Map<String, dynamic> datos,
+  });
+
+  /// Sube la foto de un voucher y devuelve la ruta dentro del bucket.
+  Future<String> subirVoucher({
+    required String juntaId,
+    required String aporteId,
+    required Uint8List bytes,
   });
 }
 
@@ -100,5 +109,28 @@ class FuenteRemotaSupabase implements FuenteRemota {
       default:
         throw ArgumentError('Operación desconocida en la cola: $operacion');
     }
+  }
+
+  /// La ruta es `<junta_id>/<aporte_id>.jpg` y no es decorativa: la primera
+  /// carpeta es lo que autoriza la política de RLS del bucket. Cambiarla rompe
+  /// el permiso, no solo el orden.
+  @override
+  Future<String> subirVoucher({
+    required String juntaId,
+    required String aporteId,
+    required Uint8List bytes,
+  }) async {
+    final ruta = '$juntaId/$aporteId.jpg';
+    await _cliente.storage
+        .from('vouchers')
+        .uploadBinary(
+          ruta,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
+          ),
+        );
+    return ruta;
   }
 }

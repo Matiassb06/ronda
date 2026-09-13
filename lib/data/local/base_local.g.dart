@@ -1616,6 +1616,39 @@ class $AportesLocalesTable extends AportesLocales
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _voucherLocalMeta = const VerificationMeta(
+    'voucherLocal',
+  );
+  @override
+  late final GeneratedColumn<String> voucherLocal = GeneratedColumn<String>(
+    'voucher_local',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ocrMontoCentavosMeta = const VerificationMeta(
+    'ocrMontoCentavos',
+  );
+  @override
+  late final GeneratedColumn<int> ocrMontoCentavos = GeneratedColumn<int>(
+    'ocr_monto_centavos',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ocrFechaMeta = const VerificationMeta(
+    'ocrFecha',
+  );
+  @override
+  late final GeneratedColumn<DateTime> ocrFecha = GeneratedColumn<DateTime>(
+    'ocr_fecha',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _actualizadoEnMeta = const VerificationMeta(
     'actualizadoEn',
   );
@@ -1638,6 +1671,9 @@ class $AportesLocalesTable extends AportesLocales
     estado,
     pagadoEn,
     voucherPath,
+    voucherLocal,
+    ocrMontoCentavos,
+    ocrFecha,
     actualizadoEn,
   ];
   @override
@@ -1718,6 +1754,30 @@ class $AportesLocalesTable extends AportesLocales
         ),
       );
     }
+    if (data.containsKey('voucher_local')) {
+      context.handle(
+        _voucherLocalMeta,
+        voucherLocal.isAcceptableOrUnknown(
+          data['voucher_local']!,
+          _voucherLocalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ocr_monto_centavos')) {
+      context.handle(
+        _ocrMontoCentavosMeta,
+        ocrMontoCentavos.isAcceptableOrUnknown(
+          data['ocr_monto_centavos']!,
+          _ocrMontoCentavosMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ocr_fecha')) {
+      context.handle(
+        _ocrFechaMeta,
+        ocrFecha.isAcceptableOrUnknown(data['ocr_fecha']!, _ocrFechaMeta),
+      );
+    }
     if (data.containsKey('actualizado_en')) {
       context.handle(
         _actualizadoEnMeta,
@@ -1770,6 +1830,18 @@ class $AportesLocalesTable extends AportesLocales
         DriftSqlType.string,
         data['${effectivePrefix}voucher_path'],
       ),
+      voucherLocal: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}voucher_local'],
+      ),
+      ocrMontoCentavos: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ocr_monto_centavos'],
+      ),
+      ocrFecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ocr_fecha'],
+      ),
       actualizadoEn: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}actualizado_en'],
@@ -1791,7 +1863,18 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
   final int montoCentavos;
   final String estado;
   final DateTime? pagadoEn;
+
+  /// Ruta en el bucket de Supabase. Null hasta que la foto se sube.
   final String? voucherPath;
+
+  /// Ruta del archivo en el teléfono, mientras espera señal para subir.
+  ///
+  /// La foto se toma en el mercado, donde no hay datos. Se guarda en el
+  /// dispositivo y el sincronizador la sube después; hasta entonces el aporte
+  /// ya está marcado como pagado, que es lo que importa.
+  final String? voucherLocal;
+  final int? ocrMontoCentavos;
+  final DateTime? ocrFecha;
   final DateTime actualizadoEn;
   const AportesLocale({
     required this.id,
@@ -1802,6 +1885,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
     required this.estado,
     this.pagadoEn,
     this.voucherPath,
+    this.voucherLocal,
+    this.ocrMontoCentavos,
+    this.ocrFecha,
     required this.actualizadoEn,
   });
   @override
@@ -1818,6 +1904,15 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
     }
     if (!nullToAbsent || voucherPath != null) {
       map['voucher_path'] = Variable<String>(voucherPath);
+    }
+    if (!nullToAbsent || voucherLocal != null) {
+      map['voucher_local'] = Variable<String>(voucherLocal);
+    }
+    if (!nullToAbsent || ocrMontoCentavos != null) {
+      map['ocr_monto_centavos'] = Variable<int>(ocrMontoCentavos);
+    }
+    if (!nullToAbsent || ocrFecha != null) {
+      map['ocr_fecha'] = Variable<DateTime>(ocrFecha);
     }
     map['actualizado_en'] = Variable<DateTime>(actualizadoEn);
     return map;
@@ -1837,6 +1932,15 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
       voucherPath: voucherPath == null && nullToAbsent
           ? const Value.absent()
           : Value(voucherPath),
+      voucherLocal: voucherLocal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(voucherLocal),
+      ocrMontoCentavos: ocrMontoCentavos == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ocrMontoCentavos),
+      ocrFecha: ocrFecha == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ocrFecha),
       actualizadoEn: Value(actualizadoEn),
     );
   }
@@ -1855,6 +1959,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
       estado: serializer.fromJson<String>(json['estado']),
       pagadoEn: serializer.fromJson<DateTime?>(json['pagadoEn']),
       voucherPath: serializer.fromJson<String?>(json['voucherPath']),
+      voucherLocal: serializer.fromJson<String?>(json['voucherLocal']),
+      ocrMontoCentavos: serializer.fromJson<int?>(json['ocrMontoCentavos']),
+      ocrFecha: serializer.fromJson<DateTime?>(json['ocrFecha']),
       actualizadoEn: serializer.fromJson<DateTime>(json['actualizadoEn']),
     );
   }
@@ -1870,6 +1977,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
       'estado': serializer.toJson<String>(estado),
       'pagadoEn': serializer.toJson<DateTime?>(pagadoEn),
       'voucherPath': serializer.toJson<String?>(voucherPath),
+      'voucherLocal': serializer.toJson<String?>(voucherLocal),
+      'ocrMontoCentavos': serializer.toJson<int?>(ocrMontoCentavos),
+      'ocrFecha': serializer.toJson<DateTime?>(ocrFecha),
       'actualizadoEn': serializer.toJson<DateTime>(actualizadoEn),
     };
   }
@@ -1883,6 +1993,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
     String? estado,
     Value<DateTime?> pagadoEn = const Value.absent(),
     Value<String?> voucherPath = const Value.absent(),
+    Value<String?> voucherLocal = const Value.absent(),
+    Value<int?> ocrMontoCentavos = const Value.absent(),
+    Value<DateTime?> ocrFecha = const Value.absent(),
     DateTime? actualizadoEn,
   }) => AportesLocale(
     id: id ?? this.id,
@@ -1893,6 +2006,11 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
     estado: estado ?? this.estado,
     pagadoEn: pagadoEn.present ? pagadoEn.value : this.pagadoEn,
     voucherPath: voucherPath.present ? voucherPath.value : this.voucherPath,
+    voucherLocal: voucherLocal.present ? voucherLocal.value : this.voucherLocal,
+    ocrMontoCentavos: ocrMontoCentavos.present
+        ? ocrMontoCentavos.value
+        : this.ocrMontoCentavos,
+    ocrFecha: ocrFecha.present ? ocrFecha.value : this.ocrFecha,
     actualizadoEn: actualizadoEn ?? this.actualizadoEn,
   );
   AportesLocale copyWithCompanion(AportesLocalesCompanion data) {
@@ -1911,6 +2029,13 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
       voucherPath: data.voucherPath.present
           ? data.voucherPath.value
           : this.voucherPath,
+      voucherLocal: data.voucherLocal.present
+          ? data.voucherLocal.value
+          : this.voucherLocal,
+      ocrMontoCentavos: data.ocrMontoCentavos.present
+          ? data.ocrMontoCentavos.value
+          : this.ocrMontoCentavos,
+      ocrFecha: data.ocrFecha.present ? data.ocrFecha.value : this.ocrFecha,
       actualizadoEn: data.actualizadoEn.present
           ? data.actualizadoEn.value
           : this.actualizadoEn,
@@ -1928,6 +2053,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
           ..write('estado: $estado, ')
           ..write('pagadoEn: $pagadoEn, ')
           ..write('voucherPath: $voucherPath, ')
+          ..write('voucherLocal: $voucherLocal, ')
+          ..write('ocrMontoCentavos: $ocrMontoCentavos, ')
+          ..write('ocrFecha: $ocrFecha, ')
           ..write('actualizadoEn: $actualizadoEn')
           ..write(')'))
         .toString();
@@ -1943,6 +2071,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
     estado,
     pagadoEn,
     voucherPath,
+    voucherLocal,
+    ocrMontoCentavos,
+    ocrFecha,
     actualizadoEn,
   );
   @override
@@ -1957,6 +2088,9 @@ class AportesLocale extends DataClass implements Insertable<AportesLocale> {
           other.estado == this.estado &&
           other.pagadoEn == this.pagadoEn &&
           other.voucherPath == this.voucherPath &&
+          other.voucherLocal == this.voucherLocal &&
+          other.ocrMontoCentavos == this.ocrMontoCentavos &&
+          other.ocrFecha == this.ocrFecha &&
           other.actualizadoEn == this.actualizadoEn);
 }
 
@@ -1969,6 +2103,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
   final Value<String> estado;
   final Value<DateTime?> pagadoEn;
   final Value<String?> voucherPath;
+  final Value<String?> voucherLocal;
+  final Value<int?> ocrMontoCentavos;
+  final Value<DateTime?> ocrFecha;
   final Value<DateTime> actualizadoEn;
   final Value<int> rowid;
   const AportesLocalesCompanion({
@@ -1980,6 +2117,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
     this.estado = const Value.absent(),
     this.pagadoEn = const Value.absent(),
     this.voucherPath = const Value.absent(),
+    this.voucherLocal = const Value.absent(),
+    this.ocrMontoCentavos = const Value.absent(),
+    this.ocrFecha = const Value.absent(),
     this.actualizadoEn = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1992,6 +2132,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
     required String estado,
     this.pagadoEn = const Value.absent(),
     this.voucherPath = const Value.absent(),
+    this.voucherLocal = const Value.absent(),
+    this.ocrMontoCentavos = const Value.absent(),
+    this.ocrFecha = const Value.absent(),
     required DateTime actualizadoEn,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2010,6 +2153,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
     Expression<String>? estado,
     Expression<DateTime>? pagadoEn,
     Expression<String>? voucherPath,
+    Expression<String>? voucherLocal,
+    Expression<int>? ocrMontoCentavos,
+    Expression<DateTime>? ocrFecha,
     Expression<DateTime>? actualizadoEn,
     Expression<int>? rowid,
   }) {
@@ -2022,6 +2168,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
       if (estado != null) 'estado': estado,
       if (pagadoEn != null) 'pagado_en': pagadoEn,
       if (voucherPath != null) 'voucher_path': voucherPath,
+      if (voucherLocal != null) 'voucher_local': voucherLocal,
+      if (ocrMontoCentavos != null) 'ocr_monto_centavos': ocrMontoCentavos,
+      if (ocrFecha != null) 'ocr_fecha': ocrFecha,
       if (actualizadoEn != null) 'actualizado_en': actualizadoEn,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2036,6 +2185,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
     Value<String>? estado,
     Value<DateTime?>? pagadoEn,
     Value<String?>? voucherPath,
+    Value<String?>? voucherLocal,
+    Value<int?>? ocrMontoCentavos,
+    Value<DateTime?>? ocrFecha,
     Value<DateTime>? actualizadoEn,
     Value<int>? rowid,
   }) {
@@ -2048,6 +2200,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
       estado: estado ?? this.estado,
       pagadoEn: pagadoEn ?? this.pagadoEn,
       voucherPath: voucherPath ?? this.voucherPath,
+      voucherLocal: voucherLocal ?? this.voucherLocal,
+      ocrMontoCentavos: ocrMontoCentavos ?? this.ocrMontoCentavos,
+      ocrFecha: ocrFecha ?? this.ocrFecha,
       actualizadoEn: actualizadoEn ?? this.actualizadoEn,
       rowid: rowid ?? this.rowid,
     );
@@ -2080,6 +2235,15 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
     if (voucherPath.present) {
       map['voucher_path'] = Variable<String>(voucherPath.value);
     }
+    if (voucherLocal.present) {
+      map['voucher_local'] = Variable<String>(voucherLocal.value);
+    }
+    if (ocrMontoCentavos.present) {
+      map['ocr_monto_centavos'] = Variable<int>(ocrMontoCentavos.value);
+    }
+    if (ocrFecha.present) {
+      map['ocr_fecha'] = Variable<DateTime>(ocrFecha.value);
+    }
     if (actualizadoEn.present) {
       map['actualizado_en'] = Variable<DateTime>(actualizadoEn.value);
     }
@@ -2100,6 +2264,9 @@ class AportesLocalesCompanion extends UpdateCompanion<AportesLocale> {
           ..write('estado: $estado, ')
           ..write('pagadoEn: $pagadoEn, ')
           ..write('voucherPath: $voucherPath, ')
+          ..write('voucherLocal: $voucherLocal, ')
+          ..write('ocrMontoCentavos: $ocrMontoCentavos, ')
+          ..write('ocrFecha: $ocrFecha, ')
           ..write('actualizadoEn: $actualizadoEn, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3462,6 +3629,9 @@ typedef $$AportesLocalesTableCreateCompanionBuilder =
       required String estado,
       Value<DateTime?> pagadoEn,
       Value<String?> voucherPath,
+      Value<String?> voucherLocal,
+      Value<int?> ocrMontoCentavos,
+      Value<DateTime?> ocrFecha,
       required DateTime actualizadoEn,
       Value<int> rowid,
     });
@@ -3475,6 +3645,9 @@ typedef $$AportesLocalesTableUpdateCompanionBuilder =
       Value<String> estado,
       Value<DateTime?> pagadoEn,
       Value<String?> voucherPath,
+      Value<String?> voucherLocal,
+      Value<int?> ocrMontoCentavos,
+      Value<DateTime?> ocrFecha,
       Value<DateTime> actualizadoEn,
       Value<int> rowid,
     });
@@ -3525,6 +3698,21 @@ class $$AportesLocalesTableFilterComposer
 
   ColumnFilters<String> get voucherPath => $composableBuilder(
     column: $table.voucherPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get voucherLocal => $composableBuilder(
+    column: $table.voucherLocal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ocrMontoCentavos => $composableBuilder(
+    column: $table.ocrMontoCentavos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get ocrFecha => $composableBuilder(
+    column: $table.ocrFecha,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3583,6 +3771,21 @@ class $$AportesLocalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get voucherLocal => $composableBuilder(
+    column: $table.voucherLocal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ocrMontoCentavos => $composableBuilder(
+    column: $table.ocrMontoCentavos,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get ocrFecha => $composableBuilder(
+    column: $table.ocrFecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get actualizadoEn => $composableBuilder(
     column: $table.actualizadoEn,
     builder: (column) => ColumnOrderings(column),
@@ -3627,6 +3830,19 @@ class $$AportesLocalesTableAnnotationComposer
     column: $table.voucherPath,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get voucherLocal => $composableBuilder(
+    column: $table.voucherLocal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ocrMontoCentavos => $composableBuilder(
+    column: $table.ocrMontoCentavos,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get ocrFecha =>
+      $composableBuilder(column: $table.ocrFecha, builder: (column) => column);
 
   GeneratedColumn<DateTime> get actualizadoEn => $composableBuilder(
     column: $table.actualizadoEn,
@@ -3673,6 +3889,9 @@ class $$AportesLocalesTableTableManager
                 Value<String> estado = const Value.absent(),
                 Value<DateTime?> pagadoEn = const Value.absent(),
                 Value<String?> voucherPath = const Value.absent(),
+                Value<String?> voucherLocal = const Value.absent(),
+                Value<int?> ocrMontoCentavos = const Value.absent(),
+                Value<DateTime?> ocrFecha = const Value.absent(),
                 Value<DateTime> actualizadoEn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AportesLocalesCompanion(
@@ -3684,6 +3903,9 @@ class $$AportesLocalesTableTableManager
                 estado: estado,
                 pagadoEn: pagadoEn,
                 voucherPath: voucherPath,
+                voucherLocal: voucherLocal,
+                ocrMontoCentavos: ocrMontoCentavos,
+                ocrFecha: ocrFecha,
                 actualizadoEn: actualizadoEn,
                 rowid: rowid,
               ),
@@ -3697,6 +3919,9 @@ class $$AportesLocalesTableTableManager
                 required String estado,
                 Value<DateTime?> pagadoEn = const Value.absent(),
                 Value<String?> voucherPath = const Value.absent(),
+                Value<String?> voucherLocal = const Value.absent(),
+                Value<int?> ocrMontoCentavos = const Value.absent(),
+                Value<DateTime?> ocrFecha = const Value.absent(),
                 required DateTime actualizadoEn,
                 Value<int> rowid = const Value.absent(),
               }) => AportesLocalesCompanion.insert(
@@ -3708,6 +3933,9 @@ class $$AportesLocalesTableTableManager
                 estado: estado,
                 pagadoEn: pagadoEn,
                 voucherPath: voucherPath,
+                voucherLocal: voucherLocal,
+                ocrMontoCentavos: ocrMontoCentavos,
+                ocrFecha: ocrFecha,
                 actualizadoEn: actualizadoEn,
                 rowid: rowid,
               ),

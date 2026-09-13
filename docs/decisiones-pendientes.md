@@ -269,3 +269,54 @@ este proyecto es personal.
 - Nota menor: el dialogo del sistema dice "septiembre" (forma de la RAE, la que
   trae Flutter) mientras los textos propios dicen "setiembre" (uso peruano). Se
   deja asi: la voz de la app es nuestra, la del dialogo del sistema no.
+
+---
+
+# Pasos 5 y 6
+
+## D32. El OCR sugiere, ella decide
+
+- Regla 9 del CLAUDE.md, hecha pantalla: lo que lee ML Kit llega a una hoja de
+  confirmacion en campos editables, con la foto arriba para poder comparar.
+  Nada se guarda hasta que ella toca confirmar.
+- Lo leido se guarda aparte en `ocr_monto_centavos` y `ocr_fecha`, separado de
+  lo confirmado. Asi se puede medir despues que tan bien funciona el OCR sin que
+  eso toque nunca la cuenta real.
+- Si el OCR no entiende el monto, se sugiere el que le tocaba pagar, no un campo
+  vacio.
+
+## D33. El monto se busca por palabra clave, no por posicion
+
+- Contexto: un voucher de banco trae varias cifras (monto, comision, saldo).
+  Tomar la primera a veces agarra la comision.
+- Decision: primero se busca una linea con "monto", "total", "importe",
+  "yapeaste"; si ninguna lo dice, se toma la primera con S/. Cubierto por test.
+
+## D34. Una fecha imposible se descarta, no se corrige
+
+- `DateTime(2026, 2, 31)` en Dart devuelve el 3 de marzo sin avisar. Se valida y
+  se devuelve null. Prefiere no saber antes que inventar una fecha de pago.
+
+## D35. La foto espera senal en el telefono
+
+- El aporte queda pagado al instante; la foto se guarda local y el sincronizador
+  la sube despues. Va ANTES de la cola de filas, para que cuando el UPDATE del
+  aporte llegue a Postgres la ruta del voucher ya exista.
+- Un fallo al subir no detiene nada: la foto es respaldo, no el dato.
+
+## D36. Cero dias de gracia en el historial
+
+- Si el turno era el lunes y pago el martes, se atraso. Suavizarlo seria
+  mentirle a la cabeza de junta sobre en quien puede confiar, que es justo para
+  lo que sirve esa pantalla.
+
+## D37. El resumen que se comparte no senala a nadie
+
+- Dice cuantas cumplieron y nombra a las puntuales, pero NO dice quien debe. Esa
+  conversacion es de dos personas, no del grupo de WhatsApp. Cubierto por test.
+
+## D38. PENDIENTE: la junta no se cierra sola
+
+- Encontrado probando: al completar el ultimo turno, la junta sigue en estado
+  'activa'. La lista dice "En curso" mientras el cuaderno dice "Esta junta ya
+  termino". Hay que pasar el estado a 'cerrada' al completar el ultimo turno.

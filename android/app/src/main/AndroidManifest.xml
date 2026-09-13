@@ -12,6 +12,11 @@
          Sin esto, apagar y prender el celular borra los recordatorios de cobro. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
+    <!-- Foto del voucher (paso 5). El OCR corre en el propio telefono, asi que
+         la imagen no sale de aqui hasta que ella confirma el pago. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
     <application
         android:label="Ronda"
         android:name="${applicationName}"

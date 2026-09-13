@@ -340,6 +340,50 @@ class RepositorioJuntas {
     _sincronizarEnSegundoPlano();
   }
 
+  /// Marca un aporte como pagado con la foto del voucher.
+  ///
+  /// El monto y la fecha que llegan aquí son los que **ella confirmó**, no los
+  /// que leyó el OCR. Lo que leyó el OCR se guarda aparte, en `ocr_*`, para
+  /// poder comparar después qué tan bien funciona sin que eso toque nunca la
+  /// cuenta real (regla 9 del CLAUDE.md).
+  ///
+  /// La foto se queda en el teléfono y el sincronizador la sube cuando haya
+  /// señal. El pago cuenta desde ya.
+  Future<void> registrarPagoConVoucher({
+    required String aporteId,
+    required int montoCentavos,
+    required DateTime fechaDelPago,
+    required String rutaLocalDeLaFoto,
+    int? ocrMontoCentavos,
+    DateTime? ocrFecha,
+  }) async {
+    final ahora = DateTime.now();
+
+    await (_local.update(
+      _local.aportesLocales,
+    )..where((a) => a.id.equals(aporteId))).write(
+      AportesLocalesCompanion(
+        estado: Value(EstadoAporte.pagado.valorEnBase),
+        montoCentavos: Value(montoCentavos),
+        pagadoEn: Value(fechaDelPago),
+        voucherLocal: Value(rutaLocalDeLaFoto),
+        ocrMontoCentavos: Value(ocrMontoCentavos),
+        ocrFecha: Value(ocrFecha),
+        actualizadoEn: Value(ahora),
+      ),
+    );
+
+    await _encolar('aportes', 'actualizar', aporteId, {
+      'estado': EstadoAporte.pagado.valorEnBase,
+      'monto_centavos': montoCentavos,
+      'pagado_en': fechaDelPago.toUtc().toIso8601String(),
+      'ocr_monto_centavos': ocrMontoCentavos,
+      if (ocrFecha != null) 'ocr_fecha': Junta.comoFechaCivil(ocrFecha),
+    });
+
+    _sincronizarEnSegundoPlano();
+  }
+
   Future<void> completarTurno(String turnoId) async {
     final ahora = DateTime.now();
 

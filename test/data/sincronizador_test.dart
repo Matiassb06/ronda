@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ronda/data/local/base_local.dart';
@@ -18,6 +19,7 @@ class FuenteFalsa implements FuenteRemota {
   final Set<String> rechazaSiempre = {};
 
   final List<String> aplicados = [];
+  final List<String> voucheresSubidos = [];
   List<Map<String, dynamic>> juntasRemotas = [];
 
   @override
@@ -66,6 +68,17 @@ class FuenteFalsa implements FuenteRemota {
       throw Exception('violación de restricción en $tabla');
     }
     aplicados.add('$operacion:$tabla:$filaId');
+  }
+
+  @override
+  Future<String> subirVoucher({
+    required String juntaId,
+    required String aporteId,
+    required Uint8List bytes,
+  }) async {
+    _comprobarSenal();
+    voucheresSubidos.add(aporteId);
+    return '$juntaId/$aporteId.jpg';
   }
 }
 

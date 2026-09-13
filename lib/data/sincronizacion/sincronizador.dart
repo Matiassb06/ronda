@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 
@@ -60,6 +61,7 @@ class Sincronizador {
 
     _corriendo = true;
     try {
+      await _subirVoucheres();
       final empujados = await _empujar();
       final quedan = (await _local.leerCola()).length;
 
@@ -116,6 +118,47 @@ class Sincronizador {
     }
 
     return empujados;
+  }
+
+  /// Sube las fotos de voucher que esperan señal.
+  ///
+  /// Va antes de la cola de filas para que, cuando el UPDATE del aporte llegue
+  /// a Postgres, la ruta del voucher ya exista. Al revés se subiría una fila
+  /// apuntando a un archivo que todavía no está.
+  ///
+  /// Un fallo aquí no detiene nada: el aporte ya está marcado como pagado y la
+  /// foto es un respaldo, no el dato. Se reintenta en el siguiente latido.
+  Future<void> _subirVoucheres() async {
+    for (final aporte in await _local.leerVoucheresPendientes()) {
+      final ruta = aporte.voucherLocal;
+      if (ruta == null) continue;
+
+      try {
+        final archivo = File(ruta);
+        if (!archivo.existsSync()) {
+          // La foto ya no está en el teléfono: se deja de intentar.
+          await _local.olvidarVoucherLocal(aporte.id);
+          continue;
+        }
+
+        final enElBucket = await _remoto.subirVoucher(
+          juntaId: aporte.juntaId,
+          aporteId: aporte.id,
+          bytes: await archivo.readAsBytes(),
+        );
+
+        await _local.anotarVoucherSubido(aporte.id, enElBucket);
+        await _local.encolar(
+          tabla: 'aportes',
+          filaId: aporte.id,
+          operacion: 'actualizar',
+          datos: jsonEncode({'voucher_path': enElBucket}),
+        );
+      } catch (_) {
+        // Sin señal o el bucket rechazó: se intenta en el próximo latido.
+        continue;
+      }
+    }
   }
 
   /// Trae todo lo del usuario y reemplaza el espejo local.

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/avisos/avisos.dart';
@@ -9,7 +11,10 @@ import '../../../l10n/textos.dart';
 import '../../juntas/application/juntas.dart';
 import '../../participantes/domain/participante.dart';
 import '../domain/aporte.dart';
+import '../../../core/ocr/lector_ocr.dart';
+import '../domain/lector_de_voucher.dart';
 import '../domain/recordatorio.dart';
+import 'hoja_de_voucher.dart';
 
 /// El cuaderno. Esta es la app.
 ///
@@ -45,7 +50,14 @@ class PantallaCuaderno extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(cuaderno?.junta.nombre ?? Textos.cargando),
-        actions: const [_AvisoPendientes()],
+        actions: [
+          const _AvisoPendientes(),
+          IconButton(
+            tooltip: Textos.verHistorial,
+            icon: const Icon(Icons.bar_chart, size: 26),
+            onPressed: () => context.go('/junta/$juntaId/historial'),
+          ),
+        ],
       ),
       body: cuaderno == null
           ? const Center(child: CircularProgressIndicator())
@@ -131,6 +143,50 @@ class _Contenido extends ConsumerWidget {
     }
   }
 
+  /// Foto del voucher, OCR y confirmación.
+  ///
+  /// Nada se guarda hasta que ella confirma en la hoja: esa es la regla 9 del
+  /// CLAUDE.md, y por eso el OCR solo prellena campos editables.
+  Future<void> _conVoucher(
+    BuildContext context,
+    WidgetRef ref,
+    Aporte aporte,
+  ) async {
+    final foto = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+      maxWidth: 1600,
+    );
+    if (foto == null || !context.mounted) return;
+
+    final lector = LectorOcr();
+    final texto = await lector.leerTexto(foto.path);
+    await lector.cerrar();
+    if (!context.mounted) return;
+
+    final confirmado = await showModalBottomSheet<VoucherConfirmado>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => HojaDeVoucher(
+        rutaLocal: foto.path,
+        lectura: LectorDeVoucher.leer(texto),
+        montoEsperadoCentavos: aporte.montoCentavos,
+      ),
+    );
+    if (confirmado == null) return;
+
+    await ref
+        .read(repositorioJuntasProvider)
+        .registrarPagoConVoucher(
+          aporteId: aporte.id,
+          montoCentavos: confirmado.montoCentavos,
+          fechaDelPago: confirmado.fecha,
+          rutaLocalDeLaFoto: confirmado.rutaLocal,
+          ocrMontoCentavos: confirmado.ocrMonto,
+          ocrFecha: confirmado.ocrFecha,
+        );
+  }
+
   Future<void> _alternar(WidgetRef ref, Aporte aporte) async {
     await ref
         .read(repositorioJuntasProvider)
@@ -171,6 +227,9 @@ class _Contenido extends ConsumerWidget {
                 alRecordar: participante.tieneTelefono && !aporte.estaPagado
                     ? () => _recordar(context, participante, aporte)
                     : null,
+                alFotografiar: aporte.estaPagado
+                    ? null
+                    : () => _conVoucher(context, ref, aporte),
               );
             },
           ),
@@ -340,6 +399,7 @@ class _FilaDelCuaderno extends StatelessWidget {
     required this.esQuienCobra,
     required this.alTocar,
     required this.alRecordar,
+    required this.alFotografiar,
   });
 
   final Participante participante;
@@ -349,6 +409,9 @@ class _FilaDelCuaderno extends StatelessWidget {
 
   /// Null cuando no hay a quién escribirle: sin teléfono, o ya pagó.
   final VoidCallback? alRecordar;
+
+  /// Null cuando ya pagó: no hay voucher que tomar.
+  final VoidCallback? alFotografiar;
 
   @override
   Widget build(BuildContext context) {
@@ -392,14 +455,18 @@ class _FilaDelCuaderno extends StatelessWidget {
               Monto.formatear(aporte.montoCentavos),
               style: TemaRonda.estiloMonto(context, tamano: 22),
             ),
+            if (alFotografiar != null)
+              IconButton(
+                tooltip: Textos.tomarFotoDelVoucher,
+                icon: const Icon(Icons.photo_camera_outlined, size: 28),
+                onPressed: alFotografiar,
+              ),
             if (alRecordar != null)
               IconButton(
                 tooltip: Textos.recordarPorWhatsApp,
                 icon: const Icon(Icons.chat_outlined, size: 28),
                 onPressed: alRecordar,
-              )
-            else
-              const SizedBox(width: 48),
+              ),
           ],
         ),
       ),

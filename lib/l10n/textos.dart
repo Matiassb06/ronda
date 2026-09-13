@@ -89,6 +89,27 @@ class Textos {
   static const String cargando = 'Cargando...';
   static const String recordarPorWhatsApp = 'Recordarle por WhatsApp';
   static const String noSePudoAbrirWhatsApp = 'No se pudo abrir WhatsApp';
+
+  // Voucher
+  static const String tomarFotoDelVoucher = 'Tomar foto del voucher';
+  static const String confirmaElVoucher = 'Confirma el pago';
+  static const String revisaLoLeido =
+      'Revisa lo que se leyó de la foto y corrige si hace falta.';
+  static const String noSeLeyoElVoucher =
+      'No se pudo leer la foto. Escribe el monto y la fecha.';
+  static const String cuantoPago = '¿Cuánto pagó?';
+  static const String confirmarPago = 'Confirmar pago';
+  static const String leyendoElVoucher = 'Leyendo la foto...';
+
+  // Historial
+  static const String historial = 'Historial';
+  static const String verHistorial = 'Ver historial';
+  static const String siempreATiempo = 'Siempre a tiempo';
+  static const String cumplimiento = 'Cumplimiento';
+  static const String compartirResumen = 'Compartir resumen';
+  static const String codigoDeLaJunta = 'Código de la junta';
+  static const String sinHistorial = 'Todavía no hay nada que mostrar';
+  static const String deAportes = 'de los aportes';
   static const String cancelar = 'Cancelar';
   static const String errorGenerico = 'Algo salió mal. Intenta de nuevo.';
 }

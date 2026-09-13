@@ -63,7 +63,20 @@ class AportesLocales extends Table {
   IntColumn get montoCentavos => integer()();
   TextColumn get estado => text()();
   DateTimeColumn get pagadoEn => dateTime().nullable()();
+
+  /// Ruta en el bucket de Supabase. Null hasta que la foto se sube.
   TextColumn get voucherPath => text().nullable()();
+
+  /// Ruta del archivo en el teléfono, mientras espera señal para subir.
+  ///
+  /// La foto se toma en el mercado, donde no hay datos. Se guarda en el
+  /// dispositivo y el sincronizador la sube después; hasta entonces el aporte
+  /// ya está marcado como pagado, que es lo que importa.
+  TextColumn get voucherLocal => text().nullable()();
+
+  IntColumn get ocrMontoCentavos => integer().nullable()();
+  DateTimeColumn get ocrFecha => dateTime().nullable()();
+
   DateTimeColumn get actualizadoEn => dateTime()();
 
   @override
@@ -115,7 +128,29 @@ class BaseLocal extends _$BaseLocal {
   BaseLocal.enMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, desde, hasta) async {
+      // 1 -> 2: llega el voucher del paso 5. Se agregan columnas nuevas en vez
+      // de recrear la tabla: en el teléfono de la cabeza de junta puede haber
+      // pagos marcados que todavía no subieron, y borrarlos sería perderlos.
+      if (desde < 2) {
+        await m.addColumn(aportesLocales, aportesLocales.voucherLocal);
+        await m.addColumn(aportesLocales, aportesLocales.ocrMontoCentavos);
+        await m.addColumn(aportesLocales, aportesLocales.ocrFecha);
+      }
+    },
+  );
+
+  /// Aportes con la foto todavía en el teléfono, esperando señal para subir.
+  Future<List<AportesLocale>> leerVoucheresPendientes() {
+    return (select(
+      aportesLocales,
+    )..where((a) => a.voucherLocal.isNotNull() & a.voucherPath.isNull())).get();
+  }
 
   // --------------------------------------------------------------- lecturas
   // Todas devuelven streams: cuando la cola escribe en local, la pantalla se
@@ -204,6 +239,22 @@ class BaseLocal extends _$BaseLocal {
         datos: datos,
         creadoEn: DateTime.now(),
       ),
+    );
+  }
+
+  Future<void> anotarVoucherSubido(String aporteId, String rutaEnElBucket) {
+    return (update(aportesLocales)..where((a) => a.id.equals(aporteId))).write(
+      AportesLocalesCompanion(
+        voucherPath: Value(rutaEnElBucket),
+        voucherLocal: const Value(null),
+      ),
+    );
+  }
+
+  /// La foto ya no está en el teléfono: se deja de intentar subirla.
+  Future<void> olvidarVoucherLocal(String aporteId) {
+    return (update(aportesLocales)..where((a) => a.id.equals(aporteId))).write(
+      const AportesLocalesCompanion(voucherLocal: Value(null)),
     );
   }
 
