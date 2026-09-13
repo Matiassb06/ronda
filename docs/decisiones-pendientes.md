@@ -202,3 +202,10 @@ tuviera creditos. Estas son las decisiones tomadas en esa sesion.
 
 - El telefono puede pasar a otra persona y la base guarda cuentas de plata
   ajena. `olvidarTodo()` vacia las cinco tablas y la cola.
+
+## D05 resuelta (13-sep)
+
+El repositorio ya existe: `Matiassb06/ronda`, privado. El badge del README
+apunta al propietario real y el workflow de CI corre en cada push. Se mantiene
+privado hasta que cierre el ciclo, porque el profesor de Moviles revisa repos y
+este proyecto es personal.
