@@ -40,3 +40,69 @@ aplicada y las alternativas descartadas. El esquema aprobado permanece intacto.
 - Decisión: workflow preparado y badge con propietario de ejemplo, identificado
   como tal en README. Leonardo cambiará el destino cuando publique el repo.
 - Descartado: inventar un propietario real, crear remotes, publicar o hacer push.
+
+---
+
+# Decisiones del revisor (sesion del 13-sep, sin creditos de Codex)
+
+Leonardo autorizo que Claude escribiera el codigo del paso 1 mientras Codex no
+tuviera creditos. Estas son las decisiones tomadas en esa sesion.
+
+## D06. El SDK no se copia al repositorio
+
+- Contexto: D02 copio 3.6 GB del SDK de Flutter a .tooling/ para esquivar el
+  sandbox, y aun asi la build fallo con "Access is denied".
+- Decision: .tooling/ eliminado. La causa real era que la sesion de Codex solo
+  podia escribir en D:\ronda; se resuelve dandole acceso al SDK real con
+  --add-dir, no copiando herramientas.
+- Descartado: mantener la copia, aunque estuviera ignorada por git.
+
+## D07. compileSdk 37 fijado a mano
+
+- Contexto: heredar flutter.compileSdkVersion daba 36 y una dependencia del
+  stack exige 37; la build fallaba.
+- Decision: compileSdk = 37 explicito en android/app/build.gradle.kts. El
+  platform 37 ya estaba instalado y el AGP es 9.1.0.
+- Descartado: bajar dependencias del stack cerrado para caber en 36.
+
+## D08. Desugaring activado desde el paso 1
+
+- Contexto: flutter_local_notifications usa APIs de java.time y exige
+  coreLibraryDesugaring, aunque todavia no se use hasta el paso 4.
+- Decision: activarlo ahora, con desugar_jdk_libs 2.1.5.
+- Descartado: esperar al paso 4 y descubrir el fallo entonces.
+
+## D09. Compilacion incremental de Kotlin desactivada
+
+- Contexto: google_mlkit_commons y camera_android_camerax fallaban con "Could
+  not close incremental caches" en D:\ronda\build. Es bloqueo de archivos de
+  Windows, no un problema del codigo.
+- Decision: kotlin.incremental=false en android/gradle.properties.
+- Pendiente para Leonardo: excluir D:\ronda de Windows Defender probablemente
+  permita volver a activarla y acelerar las builds.
+
+## D10. Permiso de INTERNET en el manifiesto principal
+
+- Contexto: flutter create solo lo agrega a los manifiestos de debug y profile.
+- Decision: declararlo en el manifiesto principal. Sin esto el APK de release
+  que se lleva al mercado no puede hablar con Supabase, y el error aparece
+  recien en el telefono de la cabeza de junta.
+
+## D11. publishableKey en vez de anonKey
+
+- Contexto: supabase_flutter 2.17 deprecio anonKey.
+- Decision: usar publishableKey en Supabase.initialize. El nombre de la
+  variable de entorno sigue siendo SUPABASE_ANON_KEY, que es como aparece en
+  el panel de Supabase.
+
+## D12. Los textos llevan tildes
+
+- Contexto: la primera version de lib/l10n/textos.dart se escribio sin acentos.
+- Decision: corregido. La app es solo en espanol y la usuaria es una senora de
+  55 anos: un texto sin tildes se lee como hecho a las apuradas, y esta app
+  maneja la cuenta de la plata de doce personas.
+
+## D13. Sin google_fonts en tiempo de ejecucion
+
+- Confirma D04. El paquete sigue en el stack pero no se invoca: la tipografia
+  es la del sistema. Descargar fuentes exige red, y en el mercado no hay.
