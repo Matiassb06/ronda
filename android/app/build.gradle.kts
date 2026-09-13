@@ -6,33 +6,34 @@ plugins {
 
 android {
     namespace = "pe.leonardo.ronda"
-    compileSdk = flutter.compileSdkVersion
+
+    // Fijado a mano, no heredado de flutter.compileSdkVersion: alguna
+    // dependencia del stack ya exige 37 y la build falla con 36.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications usa APIs de java.time, que no existen en
+        // los Android viejos. El desugaring las traduce en tiempo de compilacion.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "pe.leonardo.ronda"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
+        // Sale de la version declarada en pubspec.yaml.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Firmado con la clave de debug por ahora, para que
+            // `flutter run --release` funcione. El keystore de release todavia
+            // no existe: cuando exista, se apunta aqui y NUNCA se versiona.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -40,8 +41,14 @@ android {
 
 kotlin {
     compilerOptions {
+        // Tiene que coincidir con sourceCompatibility/targetCompatibility de
+        // arriba, o Gradle falla por incompatibilidad entre Java y Kotlin.
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 flutter {
