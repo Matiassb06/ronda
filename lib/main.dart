@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/avisos/avisos.dart';
 import 'core/config/configuracion_supabase.dart';
 import 'core/config/pantalla_configuracion_faltante.dart';
 import 'core/router/router_ronda.dart';
@@ -19,6 +20,10 @@ Future<void> main() async {
   }
 
   await ClienteSupabase.inicializar();
+  // Los avisos se preparan antes de pintar nada: la zona horaria tiene que
+  // estar puesta en America/Lima antes de programar cualquier recordatorio.
+  await Avisos.inicializar();
+
   runApp(const ProviderScope(child: AppRonda()));
 }
 

@@ -209,3 +209,46 @@ El repositorio ya existe: `Matiassb06/ronda`, privado. El badge del README
 apunta al propietario real y el workflow de CI corre en cada push. Se mantiene
 privado hasta que cierre el ciclo, porque el profesor de Moviles revisa repos y
 este proyecto es personal.
+
+---
+
+# Paso 4: recordatorios
+
+## D25. El mensaje saluda por el primer nombre
+
+- Contexto: los participantes se guardan con nombre completo.
+- Decision: el mensaje dice "Hola Rosa", no "Hola Rosa Quispe Mamani". El
+  apellido completo suena a cobranza de banco, y esto es una vecina
+  escribiendole a otra.
+
+## D26. El mensaje nombra a quien cobra ese turno
+
+- Decision: incluir "Este turno le toca cobrar a Maria". No es decoracion: en
+  una junta, saber que el dinero va a una persona concreta y conocida es lo que
+  hace que la gente pague a tiempo. Un recordatorio abstracto no mueve a nadie.
+
+## D27. Si el turno ya vencio, el tono cambia pero no acusa
+
+- Decision: "era para el lunes y todavia falta" en vez de "estas atrasada".
+  Hay un test que comprueba que el mensaje nunca dice deuda ni moroso. La
+  cabeza de junta tiene que seguir viendo a esta persona todos los dias en el
+  mercado.
+
+## D28. Alarmas inexactas, no exactas
+
+- Contexto: `zonedSchedule` con alarma exacta exige SCHEDULE_EXACT_ALARM, que en
+  Android 12 y posteriores el usuario concede a mano en una pantalla de Ajustes.
+- Decision: `inexactAllowWhileIdle`. Un recordatorio de cobro no necesita
+  punteria al minuto, y no vale la pena hacerle atravesar una pantalla de
+  sistema a una senora de 55 anos.
+
+## D29. El permiso de notificaciones se pide dentro, no al arrancar
+
+- Decision: se pide al entrar a la lista de juntas, no en el splash. Un cuadro
+  de permiso antes de que la persona haya visto nada de la app es un cuadro que
+  se rechaza. Si lo niega, la app funciona igual.
+
+## D30. La hora del aviso se calcula en America/Lima, no en la zona del telefono
+
+- Decision: `tz.setLocalLocation(tz.getLocation('America/Lima'))` fijo. Un
+  telefono con la zona mal puesta no deberia mover el dia de cobro de una junta.

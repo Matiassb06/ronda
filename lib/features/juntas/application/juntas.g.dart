@@ -749,3 +749,53 @@ final class CuadernoFamily extends $Family
   @override
   String toString() => r'cuadernoProvider';
 }
+
+/// Pide el permiso de notificaciones una sola vez, al entrar por primera vez.
+///
+/// No se pide en el arranque a propósito: un cuadro de permiso antes de que la
+/// persona haya visto nada de la app es un cuadro que se rechaza. Se pide
+/// cuando ya está dentro y tiene contexto.
+
+@ProviderFor(permisoDeAvisos)
+final permisoDeAvisosProvider = PermisoDeAvisosProvider._();
+
+/// Pide el permiso de notificaciones una sola vez, al entrar por primera vez.
+///
+/// No se pide en el arranque a propósito: un cuadro de permiso antes de que la
+/// persona haya visto nada de la app es un cuadro que se rechaza. Se pide
+/// cuando ya está dentro y tiene contexto.
+
+final class PermisoDeAvisosProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Pide el permiso de notificaciones una sola vez, al entrar por primera vez.
+  ///
+  /// No se pide en el arranque a propósito: un cuadro de permiso antes de que la
+  /// persona haya visto nada de la app es un cuadro que se rechaza. Se pide
+  /// cuando ya está dentro y tiene contexto.
+  PermisoDeAvisosProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'permisoDeAvisosProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$permisoDeAvisosHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return permisoDeAvisos(ref);
+  }
+}
+
+String _$permisoDeAvisosHash() => r'a9580496f597a4124aabc2375ed4701f7785ee95';

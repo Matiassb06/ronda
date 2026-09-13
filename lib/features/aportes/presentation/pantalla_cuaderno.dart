@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/avisos/avisos.dart';
 import '../../../core/formato/monto.dart';
 import '../../../core/tema/tema_ronda.dart';
 import '../../../l10n/textos.dart';
 import '../../juntas/application/juntas.dart';
 import '../../participantes/domain/participante.dart';
 import '../domain/aporte.dart';
+import '../domain/recordatorio.dart';
 
 /// El cuaderno. Esta es la app.
 ///
@@ -23,6 +26,21 @@ class PantallaCuaderno extends ConsumerWidget {
     // Viene de la base local, así que o está listo o la junta todavía no se
     // descargó. No hay estado de error de red aquí: eso lo maneja la cola.
     final cuaderno = ref.watch(cuadernoProvider(juntaId));
+
+    // Cada vez que cambia el cuaderno se reprograman los avisos del turno en
+    // curso. Se hace aquí y no al crear la junta porque el texto del aviso
+    // depende de cuántas faltan por pagar, y eso cambia todo el tiempo.
+    ref.listen<CuadernoDelTurno?>(cuadernoProvider(juntaId), (_, nuevo) {
+      final turno = nuevo?.turnoActual;
+      if (nuevo == null || turno == null) return;
+      Avisos.programarTurno(
+        turnoId: turno.id,
+        nombreJunta: nuevo.junta.nombre,
+        fechaDelTurno: turno.fechaProgramada,
+        montoCentavos: nuevo.junta.montoAporteCentavos,
+        cuantasFaltan: nuevo.resumen.faltan,
+      );
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -78,6 +96,41 @@ class _Contenido extends ConsumerWidget {
   const _Contenido({required this.cuaderno});
   final CuadernoDelTurno cuaderno;
 
+  /// Abre el chat de WhatsApp con el mensaje ya escrito.
+  ///
+  /// La app no manda nada: deja el texto listo y ella le da enviar desde su
+  /// propio número. A ella le contestan; a un número desconocido, no.
+  Future<void> _recordar(
+    BuildContext context,
+    Participante participante,
+    Aporte aporte,
+  ) async {
+    final turno = cuaderno.turnoActual;
+    if (turno == null) return;
+
+    final texto = Recordatorio.mensaje(
+      nombreParticipante: participante.nombre,
+      nombreJunta: cuaderno.junta.nombre,
+      montoCentavos: aporte.montoCentavos,
+      fechaDelTurno: turno.fechaProgramada,
+      quienCobra: cuaderno.quienCobra?.nombre,
+      yaVencio: turno.estaAtrasado(DateTime.now()),
+    );
+
+    final enlace = Recordatorio.enlaceDeWhatsApp(
+      telefono: participante.telefono,
+      mensaje: texto,
+    );
+    if (enlace == null) return;
+
+    final abrio = await launchUrl(enlace, mode: LaunchMode.externalApplication);
+    if (!abrio && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(Textos.noSePudoAbrirWhatsApp)),
+      );
+    }
+  }
+
   Future<void> _alternar(WidgetRef ref, Aporte aporte) async {
     await ref
         .read(repositorioJuntasProvider)
@@ -115,6 +168,9 @@ class _Contenido extends ConsumerWidget {
                 aporte: aporte,
                 esQuienCobra: participante.id == quienCobra?.id,
                 alTocar: () => _alternar(ref, aporte),
+                alRecordar: participante.tieneTelefono && !aporte.estaPagado
+                    ? () => _recordar(context, participante, aporte)
+                    : null,
               );
             },
           ),
@@ -283,12 +339,16 @@ class _FilaDelCuaderno extends StatelessWidget {
     required this.aporte,
     required this.esQuienCobra,
     required this.alTocar,
+    required this.alRecordar,
   });
 
   final Participante participante;
   final Aporte aporte;
   final bool esQuienCobra;
   final VoidCallback alTocar;
+
+  /// Null cuando no hay a quién escribirle: sin teléfono, o ya pagó.
+  final VoidCallback? alRecordar;
 
   @override
   Widget build(BuildContext context) {
@@ -332,6 +392,14 @@ class _FilaDelCuaderno extends StatelessWidget {
               Monto.formatear(aporte.montoCentavos),
               style: TemaRonda.estiloMonto(context, tamano: 22),
             ),
+            if (alRecordar != null)
+              IconButton(
+                tooltip: Textos.recordarPorWhatsApp,
+                icon: const Icon(Icons.chat_outlined, size: 28),
+                onPressed: alRecordar,
+              )
+            else
+              const SizedBox(width: 48),
           ],
         ),
       ),

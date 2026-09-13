@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/avisos/avisos.dart';
 import '../../../data/local/base_local.dart';
 import '../../../data/remoto/fuente_remota.dart';
 import '../../../data/repositorio_juntas.dart';
@@ -175,3 +176,11 @@ CuadernoDelTurno? cuaderno(Ref ref, String juntaId) {
     aportes: delTurno,
   );
 }
+
+/// Pide el permiso de notificaciones una sola vez, al entrar por primera vez.
+///
+/// No se pide en el arranque a propósito: un cuadro de permiso antes de que la
+/// persona haya visto nada de la app es un cuadro que se rechaza. Se pide
+/// cuando ya está dentro y tiene contexto.
+@Riverpod(keepAlive: true)
+Future<bool> permisoDeAvisos(Ref ref) => Avisos.pedirPermiso();

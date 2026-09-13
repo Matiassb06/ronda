@@ -87,6 +87,8 @@ class Textos {
   // Generales
   static const String reintentar = 'Reintentar';
   static const String cargando = 'Cargando...';
+  static const String recordarPorWhatsApp = 'Recordarle por WhatsApp';
+  static const String noSePudoAbrirWhatsApp = 'No se pudo abrir WhatsApp';
   static const String cancelar = 'Cancelar';
   static const String errorGenerico = 'Algo salió mal. Intenta de nuevo.';
 }

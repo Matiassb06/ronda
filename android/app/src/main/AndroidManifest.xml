@@ -3,6 +3,15 @@
          el APK de release no puede hablar con Supabase. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Android 13 en adelante exige pedir este permiso en tiempo de ejecucion.
+         Si la usuaria lo niega, la app funciona igual: los avisos son un extra,
+         no el producto. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Para volver a programar los avisos despues de reiniciar el telefono.
+         Sin esto, apagar y prender el celular borra los recordatorios de cobro. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <application
         android:label="Ronda"
         android:name="${applicationName}"
