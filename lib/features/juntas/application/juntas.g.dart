@@ -341,6 +341,55 @@ final class ListaDeJuntasProvider
 
 String _$listaDeJuntasHash() => r'52b4ffd05ea327f91b19daf19a1f317a7431320e';
 
+/// Cuándo termina cada junta. La lista lo muestra sin pedir los turnos de cada
+/// una por separado.
+
+@ProviderFor(finDeCadaJunta)
+final finDeCadaJuntaProvider = FinDeCadaJuntaProvider._();
+
+/// Cuándo termina cada junta. La lista lo muestra sin pedir los turnos de cada
+/// una por separado.
+
+final class FinDeCadaJuntaProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, DateTime>>,
+          Map<String, DateTime>,
+          Stream<Map<String, DateTime>>
+        >
+    with
+        $FutureModifier<Map<String, DateTime>>,
+        $StreamProvider<Map<String, DateTime>> {
+  /// Cuándo termina cada junta. La lista lo muestra sin pedir los turnos de cada
+  /// una por separado.
+  FinDeCadaJuntaProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'finDeCadaJuntaProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$finDeCadaJuntaHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<String, DateTime>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<String, DateTime>> create(Ref ref) {
+    return finDeCadaJunta(ref);
+  }
+}
+
+String _$finDeCadaJuntaHash() => r'304859aff4d2e20f8b7a6b4d25ea2cddc33164a5';
+
 @ProviderFor(junta)
 final juntaProvider = JuntaFamily._();
 

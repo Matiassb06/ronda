@@ -174,6 +174,12 @@ class Sincronizador {
     final turnos = await _remoto.turnos(ids);
     final aportes = await _remoto.aportes(ids);
 
+    // Se vuelve a comprobar aquí dentro, y no solo antes de llamar: entre la
+    // comprobación y este punto pudo entrar una escritura local. Si la cola ya
+    // no está vacía, se descarta la descarga: perder un refresco no cuesta
+    // nada, pisar un pago marcado cuesta la confianza de la cabeza de junta.
+    if ((await _local.leerCola()).isNotEmpty) return;
+
     await _local.transaction(() async {
       await _local.delete(_local.aportesLocales).go();
       await _local.delete(_local.turnosLocales).go();

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/avisos/avisos.dart';
+import '../../../core/formato/fecha.dart';
 import '../../../core/formato/monto.dart';
 import '../../../core/tema/tema_ronda.dart';
 import '../../../l10n/textos.dart';
@@ -52,6 +53,11 @@ class PantallaCuaderno extends ConsumerWidget {
         title: Text(cuaderno?.junta.nombre ?? Textos.cargando),
         actions: [
           const _AvisoPendientes(),
+          IconButton(
+            tooltip: Textos.verCalendario,
+            icon: const Icon(Icons.event_note, size: 26),
+            onPressed: () => context.go('/junta/$juntaId/calendario'),
+          ),
           IconButton(
             tooltip: Textos.verHistorial,
             icon: const Icon(Icons.bar_chart, size: 26),
@@ -297,7 +303,28 @@ class _Cabecera extends ConsumerWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
+          // La pregunta número uno de una junta es cuándo hay que pagar. Antes
+          // esta pantalla no la respondía: decía quién cobra pero no qué día.
+          Row(
+            children: [
+              Icon(
+                Icons.event,
+                size: 22,
+                color: tema.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  FechaEnEspanol.conDiaDeLaSemana(turno.fechaProgramada),
+                  style: tema.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           Text(Textos.cobraHoy, style: tema.textTheme.bodyLarge),
           Text(quienCobra?.nombre ?? '', style: tema.textTheme.headlineMedium),
           const SizedBox(height: 16),
@@ -351,7 +378,7 @@ class _Cabecera extends ConsumerWidget {
               onPressed: () async {
                 await ref
                     .read(repositorioJuntasProvider)
-                    .completarTurno(turno.id);
+                    .completarTurno(turno.id, juntaId: cuaderno.junta.id);
               },
               icon: const Icon(Icons.check_circle_outline),
               label: const Text(Textos.entregarPozo),

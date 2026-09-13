@@ -110,6 +110,42 @@ class Textos {
   static const String codigoDeLaJunta = 'Código de la junta';
   static const String sinHistorial = 'Todavía no hay nada que mostrar';
   static const String deAportes = 'de los aportes';
+
+  // Calendario
+  static const String calendario = 'Calendario';
+  static const String verCalendario = 'Ver el calendario';
+  static const String laJuntaTermina = 'La junta termina el';
+  static const String empezo = 'Empezó el';
+  static const String cadaUnaSeLleva = 'Cada una se lleva';
+  static const String enCurso = 'En curso';
+  static const String deshacer = 'Deshacer';
+  static const String deshacerEntrega = '¿Deshacer la entrega?';
+  static const String deshacerEntregaDetalle =
+      'El turno vuelve a quedar pendiente. Úsalo solo si tocaste el botón sin querer.';
+
+  // Editar y borrar
+  static const String editar = 'Editar';
+  static const String editarJunta = 'Editar la junta';
+  static const String editarParticipante = 'Editar';
+  static const String borrarJunta = 'Borrar la junta';
+  static const String borrarJuntaPregunta = '¿Borrar esta junta?';
+  static const String borrarJuntaDetalle =
+      'Se borra con todo: participantes, turnos y pagos. No se puede recuperar.';
+  static const String borrar = 'Borrar';
+  static const String escribeElNombre =
+      'Escribe el nombre de la junta para confirmar';
+  static const String elNombreNoCoincide = 'El nombre no coincide';
+  static const String juntaYaEmpezada =
+      'La junta ya empezó: no se puede cambiar quiénes participan.';
+  static const String elMontoNoSeCambia =
+      'El monto no se puede cambiar con la junta ya empezada.';
+  static const String guardadoOk = 'Guardado';
+  static const String listaCongelada =
+      'La junta ya empezó. Puedes corregir nombres y celulares, pero no cambiar quiénes participan.';
+  static const String sinTelefono = 'Sin celular: no se le puede recordar';
+  static const String hastaEl = 'Hasta el';
+  static const String paraQueSirveElTelefono =
+      'Para abrirle el chat de WhatsApp con el recordatorio';
   static const String cancelar = 'Cancelar';
   static const String errorGenerico = 'Algo salió mal. Intenta de nuevo.';
 }

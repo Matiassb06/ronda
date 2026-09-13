@@ -58,7 +58,13 @@ class LatidoDeSync extends _$LatidoDeSync {
   @override
   void build() {
     final repo = ref.watch(repositorioJuntasProvider);
-    unawaited(repo.sincronizarAhora());
+
+    // En este orden y no en paralelo. Lanzados a la vez, la descarga puede
+    // llegar primero y pisar lo que la reparación acaba de escribir: se ve el
+    // cambio pendiente en la nube y la pantalla sin cambiar. Ya pasó.
+    unawaited(
+      repo.repararJuntasTerminadas().then((_) => repo.sincronizarAhora()),
+    );
 
     _reloj = Timer.periodic(
       const Duration(minutes: 1),
@@ -74,6 +80,12 @@ class LatidoDeSync extends _$LatidoDeSync {
 @riverpod
 Stream<List<Junta>> listaDeJuntas(Ref ref) =>
     ref.watch(repositorioJuntasProvider).verJuntas();
+
+/// Cuándo termina cada junta. La lista lo muestra sin pedir los turnos de cada
+/// una por separado.
+@riverpod
+Stream<Map<String, DateTime>> finDeCadaJunta(Ref ref) =>
+    ref.watch(repositorioJuntasProvider).verFinDeCadaJunta();
 
 @riverpod
 Stream<Junta?> junta(Ref ref, String juntaId) =>

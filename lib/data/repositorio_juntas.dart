@@ -40,6 +40,31 @@ class RepositorioJuntas {
 
   Future<ResultadoSync> sincronizarAhora() => _sync.sincronizar();
 
+  /// Cierra las juntas que ya terminaron pero quedaron marcadas como activas.
+  ///
+  /// Hace falta porque arreglar `completarTurno` no arregla los datos que ya
+  /// estaban mal: una junta completada antes de la corrección se quedaba
+  /// "activa" para siempre, diciendo "En curso" en la lista y "ya terminó"
+  /// dentro. Corre al arrancar y es idempotente.
+  Future<int> repararJuntasTerminadas() async {
+    final ahora = DateTime.now();
+    var reparadas = 0;
+
+    for (final fila in await _local.verJuntas().first) {
+      if (fila.estado == EstadoJunta.cerrada.valorEnBase) continue;
+
+      final turnos = await _local.leerTurnos(fila.id);
+      if (turnos.isEmpty) continue;
+      if (turnos.any((t) => t.estado != 'completado')) continue;
+
+      await _cambiarEstadoDeJunta(fila.id, EstadoJunta.cerrada, ahora);
+      reparadas++;
+    }
+
+    if (reparadas > 0) _sincronizarEnSegundoPlano();
+    return reparadas;
+  }
+
   /// Cuántos cambios esperan señal. La pantalla lo muestra.
   Stream<int> verPendientes() => _local.verPendientes();
 
@@ -52,6 +77,10 @@ class RepositorioJuntas {
   Stream<Junta?> verJunta(String juntaId) {
     return _local.verJunta(juntaId).map((f) => f == null ? null : _aJunta(f));
   }
+
+  /// Cuándo termina cada junta, indexado por id.
+  Stream<Map<String, DateTime>> verFinDeCadaJunta() =>
+      _local.verFinDeCadaJunta();
 
   Stream<List<Participante>> verParticipantes(String juntaId) {
     return _local
@@ -124,11 +153,81 @@ class RepositorioJuntas {
     return junta;
   }
 
+  /// Borra una junta con todo lo suyo.
+  ///
+  /// En Postgres las claves foráneas de participantes, turnos y aportes son
+  /// ON DELETE CASCADE, así que basta con borrar la junta. En SQLite no hay
+  /// claves declaradas, así que aquí el cascade se hace a mano.
+  Future<void> borrarJunta(String juntaId) async {
+    await _local.transaction(() async {
+      await (_local.delete(
+        _local.aportesLocales,
+      )..where((a) => a.juntaId.equals(juntaId))).go();
+      await (_local.delete(
+        _local.turnosLocales,
+      )..where((t) => t.juntaId.equals(juntaId))).go();
+      await (_local.delete(
+        _local.participantesLocales,
+      )..where((p) => p.juntaId.equals(juntaId))).go();
+      await (_local.delete(
+        _local.juntasLocales,
+      )..where((j) => j.id.equals(juntaId))).go();
+    });
+
+    await _encolar('juntas', 'borrar', juntaId, {});
+    _sincronizarEnSegundoPlano();
+  }
+
+  /// Corrige el nombre o el monto de una junta.
+  ///
+  /// El monto solo se puede cambiar mientras la junta no tenga calendario: una
+  /// vez generado, los aportes ya llevan su monto y cambiarlo dejaría la cuenta
+  /// del pozo distinta de la suma de lo que cada una tiene que poner.
+  Future<void> editarJunta({
+    required String juntaId,
+    required String nombre,
+    int? montoAporteCentavos,
+  }) async {
+    final ahora = DateTime.now();
+    final puedeCambiarMonto = !await tieneCalendario(juntaId);
+
+    await (_local.update(
+      _local.juntasLocales,
+    )..where((j) => j.id.equals(juntaId))).write(
+      JuntasLocalesCompanion(
+        nombre: Value(nombre.trim()),
+        montoAporteCentavos: puedeCambiarMonto && montoAporteCentavos != null
+            ? Value(montoAporteCentavos)
+            : const Value.absent(),
+        actualizadoEn: Value(ahora),
+      ),
+    );
+
+    await _encolar('juntas', 'actualizar', juntaId, {
+      'nombre': nombre.trim(),
+      if (puedeCambiarMonto && montoAporteCentavos != null)
+        'monto_aporte_centavos': montoAporteCentavos,
+    });
+
+    _sincronizarEnSegundoPlano();
+  }
+
+  /// Una junta con calendario ya no admite cambios en su lista de gente.
+  Future<bool> tieneCalendario(String juntaId) async {
+    return (await _local.leerTurnos(juntaId)).isNotEmpty;
+  }
+
   Future<Participante> agregarParticipante({
     required String juntaId,
     required String nombre,
     String? telefono,
   }) async {
+    // Una participante agregada después del calendario no tendría turno ni
+    // aportes: no aparecería en el cuaderno y nadie se enteraría de por qué.
+    if (await tieneCalendario(juntaId)) {
+      throw const JuntaYaEmpezada();
+    }
+
     final existentes = await _local.leerParticipantes(juntaId);
     final orden = existentes.isEmpty
         ? 1
@@ -170,11 +269,56 @@ class RepositorioJuntas {
     return participante;
   }
 
-  Future<void> borrarParticipante(String participanteId) async {
+  /// Quita a una participante, solo mientras la junta no haya empezado.
+  ///
+  /// Con el calendario generado esto rompería la sincronización sin avisar: en
+  /// Postgres las claves de turnos y aportes son ON DELETE RESTRICT, así que el
+  /// servidor rechazaría el borrado, la cola lo reintentaría cinco veces y
+  /// acabaría descartándolo. Local y remoto quedarían distintos para siempre, y
+  /// nadie se enteraría hasta contar el dinero.
+  Future<void> borrarParticipante({
+    required String participanteId,
+    required String juntaId,
+  }) async {
+    if (await tieneCalendario(juntaId)) {
+      throw const JuntaYaEmpezada();
+    }
+
     await (_local.delete(
       _local.participantesLocales,
     )..where((p) => p.id.equals(participanteId))).go();
     await _encolar('participantes', 'borrar', participanteId, {});
+    _sincronizarEnSegundoPlano();
+  }
+
+  /// Corrige el nombre o el teléfono de una participante.
+  ///
+  /// Esto sí se puede con la junta empezada: un número mal escrito se descubre
+  /// justo cuando hace falta mandarle el recordatorio, y sería absurdo obligar
+  /// a rehacer la junta entera por un dígito.
+  Future<void> editarParticipante({
+    required String participanteId,
+    required String nombre,
+    String? telefono,
+  }) async {
+    final limpio = telefono?.replaceAll(RegExp(r'\D'), '');
+    final valor = (limpio == null || limpio.isEmpty) ? null : limpio;
+
+    await (_local.update(
+      _local.participantesLocales,
+    )..where((p) => p.id.equals(participanteId))).write(
+      ParticipantesLocalesCompanion(
+        nombre: Value(nombre.trim()),
+        telefono: Value(valor),
+        actualizadoEn: Value(DateTime.now()),
+      ),
+    );
+
+    await _encolar('participantes', 'actualizar', participanteId, {
+      'nombre': nombre.trim(),
+      'telefono': valor,
+    });
+
     _sincronizarEnSegundoPlano();
   }
 
@@ -384,7 +528,12 @@ class RepositorioJuntas {
     _sincronizarEnSegundoPlano();
   }
 
-  Future<void> completarTurno(String turnoId) async {
+  /// Cierra el turno: la participante ya cobró el pozo.
+  ///
+  /// Si era el último, **la junta se cierra sola**. Antes no pasaba: la lista
+  /// seguía diciendo "En curso" mientras el cuaderno decía "ya terminó", y la
+  /// junta se quedaba activa para siempre.
+  Future<void> completarTurno(String turnoId, {required String juntaId}) async {
     final ahora = DateTime.now();
 
     await (_local.update(
@@ -401,7 +550,64 @@ class RepositorioJuntas {
       'fecha_entregado': Junta.comoFechaCivil(ahora),
     });
 
+    await _cerrarJuntaSiAcabaron(juntaId, ahora);
     _sincronizarEnSegundoPlano();
+  }
+
+  /// Devuelve un turno a pendiente, por si se tocó el botón sin querer.
+  ///
+  /// Entregar el pozo es irreversible en la vida real, pero tocar un botón no:
+  /// sin esto, un dedo torpe adelanta la junta entera y no hay vuelta atrás.
+  /// Si la junta estaba cerrada, se reabre.
+  Future<void> deshacerTurno(String turnoId, {required String juntaId}) async {
+    final ahora = DateTime.now();
+
+    await (_local.update(
+      _local.turnosLocales,
+    )..where((t) => t.id.equals(turnoId))).write(
+      TurnosLocalesCompanion(
+        estado: const Value('pendiente'),
+        actualizadoEn: Value(ahora),
+      ),
+    );
+
+    await _encolar('turnos', 'actualizar', turnoId, {
+      'estado': 'pendiente',
+      'fecha_entregado': null,
+    });
+
+    await _cambiarEstadoDeJunta(juntaId, EstadoJunta.activa, ahora);
+    _sincronizarEnSegundoPlano();
+  }
+
+  Future<void> _cerrarJuntaSiAcabaron(String juntaId, DateTime ahora) async {
+    final turnos = await _local.leerTurnos(juntaId);
+    if (turnos.isEmpty) return;
+    if (turnos.any((t) => t.estado != 'completado')) return;
+
+    await _cambiarEstadoDeJunta(juntaId, EstadoJunta.cerrada, ahora);
+  }
+
+  Future<void> _cambiarEstadoDeJunta(
+    String juntaId,
+    EstadoJunta estado,
+    DateTime ahora,
+  ) async {
+    final actual = await _local.leerJunta(juntaId);
+    if (actual == null || actual.estado == estado.valorEnBase) return;
+
+    await (_local.update(
+      _local.juntasLocales,
+    )..where((j) => j.id.equals(juntaId))).write(
+      JuntasLocalesCompanion(
+        estado: Value(estado.valorEnBase),
+        actualizadoEn: Value(ahora),
+      ),
+    );
+
+    await _encolar('juntas', 'actualizar', juntaId, {
+      'estado': estado.valorEnBase,
+    });
   }
 
   /// Al cerrar sesión se borra el espejo local: el teléfono puede pasar a otra
@@ -468,4 +674,17 @@ class RepositorioJuntas {
 /// `unawaited` sin importar `dart:async` entero solo para esto.
 void unawaited(Future<void> futuro) {
   futuro.catchError((_) {});
+}
+
+/// Se intentó cambiar la lista de participantes de una junta que ya empezó.
+///
+/// No es un error técnico sino una regla del producto: una vez repartidos los
+/// turnos, agregar o quitar gente cambia a quién le toca cobrar y cuánto pone
+/// cada una. Eso se conversa entre las participantes, no se resuelve con un
+/// botón.
+class JuntaYaEmpezada implements Exception {
+  const JuntaYaEmpezada();
+
+  @override
+  String toString() => 'La junta ya tiene calendario de turnos';
 }

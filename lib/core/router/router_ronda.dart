@@ -10,6 +10,7 @@ import '../../features/auth/application/sesion.dart';
 import '../../features/auth/presentation/pantalla_login.dart';
 import '../../features/juntas/presentation/pantalla_crear_junta.dart';
 import '../../features/historial/presentation/pantalla_historial.dart';
+import '../../features/juntas/presentation/pantalla_calendario.dart';
 import '../../features/juntas/presentation/pantalla_juntas.dart';
 import '../../features/participantes/presentation/pantalla_participantes.dart';
 
@@ -86,6 +87,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'participantes',
                 builder: (context, state) =>
                     PantallaParticipantes(juntaId: state.pathParameters['id']!),
+              ),
+              GoRoute(
+                path: 'calendario',
+                builder: (context, state) =>
+                    PantallaCalendario(juntaId: state.pathParameters['id']!),
               ),
               GoRoute(
                 path: 'historial',

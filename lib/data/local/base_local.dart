@@ -188,6 +188,28 @@ class BaseLocal extends _$BaseLocal {
     )..where((a) => a.juntaId.equals(juntaId))).watch();
   }
 
+  /// Cuándo termina cada junta: la fecha del último turno.
+  ///
+  /// Se resuelve con un solo GROUP BY en vez de pedir los turnos de cada junta
+  /// por separado. La lista de juntas se dibuja mucho y no puede permitirse una
+  /// consulta por fila.
+  Stream<Map<String, DateTime>> verFinDeCadaJunta() {
+    final maximo = turnosLocales.fechaProgramada.max();
+    final consulta = selectOnly(turnosLocales)
+      ..addColumns([turnosLocales.juntaId, maximo])
+      ..groupBy([turnosLocales.juntaId]);
+
+    return consulta.watch().map((filas) {
+      final mapa = <String, DateTime>{};
+      for (final f in filas) {
+        final id = f.read(turnosLocales.juntaId);
+        final fecha = f.read(maximo);
+        if (id != null && fecha != null) mapa[id] = fecha;
+      }
+      return mapa;
+    });
+  }
+
   Future<List<ParticipantesLocale>> leerParticipantes(String juntaId) {
     return (select(participantesLocales)
           ..where((p) => p.juntaId.equals(juntaId))

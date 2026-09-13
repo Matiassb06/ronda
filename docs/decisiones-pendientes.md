@@ -320,3 +320,55 @@ este proyecto es personal.
 - Encontrado probando: al completar el ultimo turno, la junta sigue en estado
   'activa'. La lista dice "En curso" mientras el cuaderno dice "Esta junta ya
   termino". Hay que pasar el estado a 'cerrada' al completar el ultimo turno.
+
+---
+
+# Pasada de revision como probador (13-sep)
+
+## D38 RESUELTA. La junta se cierra sola
+
+Al completar el ultimo turno pasa a 'cerrada'. Se agrego ademas
+`repararJuntasTerminadas()`, que corre al arrancar: **arreglar el codigo no
+arregla los datos que ya estaban mal guardados**, y una junta terminada antes de
+la correccion se habria quedado activa para siempre.
+
+## D39. La lista de participantes se congela al generar el calendario
+
+- **Era un bug serio y silencioso.** En Postgres las claves de turnos y aportes
+  hacia participantes son ON DELETE RESTRICT; en Drift no hay claves declaradas.
+  Borrar una participante se aceptaba en el telefono, el servidor lo rechazaba,
+  la cola lo reintentaba cinco veces y lo descartaba. **Las dos bases quedaban
+  distintas para siempre** y nadie se enteraba hasta contar el dinero.
+- Agregar tarde tenia el problema simetrico: la persona quedaba sin turno ni
+  aportes, no salia en el cuaderno y nadie sabia por que.
+- Decision: con calendario generado se pueden corregir nombres y telefonos, pero
+  no cambiar quienes participan. Ademas de proteger la sincronizacion, es lo
+  correcto: cambiar la rueda a mitad de junta se conversa, no se resuelve con un
+  boton.
+
+## D40. El monto no se cambia con la junta empezada
+
+Los aportes ya llevan su monto copiado. Cambiar el de la junta dejaria el pozo
+distinto de la suma de lo que cada una tiene que poner, y nadie sabria cual de
+los dos numeros es el bueno. El nombre si se cambia siempre.
+
+## D41. El cuaderno muestra la fecha del turno
+
+Faltaba. Decia quien cobra pero no que dia, que es la pregunta numero uno de una
+junta. Se agrego ademas una pantalla de calendario con todos los turnos, porque
+la otra pregunta es "cuando me toca a mi" y el cuaderno solo muestra el actual.
+
+## D42. Se puede deshacer la entrega del pozo
+
+Entregar el dinero es irreversible en la vida real, pero tocar un boton no. Sin
+esto, un dedo torpe adelantaba la junta entera sin vuelta atras.
+
+## D43. Reparar y sincronizar van en ese orden, no en paralelo
+
+- **Bug encontrado probando**: lanzados a la vez, la descarga llegaba antes que
+  la reparacion y la pisaba. Se veia el cambio pendiente en la nube y la
+  pantalla sin cambiar.
+- Ademas, `_descargar` vuelve a comprobar que la cola este vacia **dentro** de
+  la transaccion: entre la comprobacion inicial y la escritura puede entrar un
+  cambio local. Perder un refresco no cuesta nada; pisar un pago marcado cuesta
+  la confianza de la cabeza de junta.
