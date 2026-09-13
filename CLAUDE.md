@@ -40,10 +40,12 @@ con nota individual.
 
 - **Claude** fija el stack y la estructura, escribe la especificación de cada
   paso y revisa lo que salió contra las reglas de este archivo. **Claude no
-  escribe el código de la app.** Única excepción, acordada el 13-sep: si al
-  revisar encuentra lógica de dominio sin cubrir, escribe él los tests que
-  faltan. Son Dart puro y existen justamente para atrapar lo que se hizo mal;
-  que los escriba quien no escribió el código es la gracia.
+  escribe el código de la app**, con dos excepciones acordadas el 13-sep:
+  1. Si al revisar encuentra lógica de dominio sin cubrir, escribe él los tests
+     que faltan. Son Dart puro y existen justamente para atrapar lo que se hizo
+     mal; que los escriba quien no escribió el código es la gracia.
+  2. **Mientras Codex no tenga créditos disponibles, Claude construye.** El paso
+     1 se escribió así, el 13-sep. Cuando Codex vuelva, vuelve el reparto normal.
 - **Codex** escribe el código. Todo el código, en esta carpeta.
 - Si Claude necesita explicar cómo debería quedar algo, lo describe en el
   encargo; no lo deja commiteado.
@@ -130,7 +132,7 @@ de aportes vive en `domain` y es Dart puro, sin imports de Flutter, porque es lo
 
 | Paso | Resultado |
 |---|---|
-| 1 | Proyecto, tema Material 3, go_router, Riverpod, login con Google, CI |
+| 1 | Proyecto, tema Material 3, go_router, Riverpod, login con Google, CI (HECHO el 13-sep) |
 | 2 | Crear junta, participantes a mano, calendario de turnos |
 | 3 | Marcar pagos y ver quién falta (aquí ya reemplaza el cuaderno) |
 | 4 | Recordatorio que abre WhatsApp con el mensaje armado |
