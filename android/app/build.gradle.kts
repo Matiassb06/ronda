@@ -1,3 +1,14 @@
+import java.util.Properties
+
+// La clave de firma vive FUERA del repositorio, en android/key.properties, que
+// el .gitignore excluye. Si el archivo no está, la app igual compila en debug:
+// solo se cae al pedir un release, que es cuando de verdad hace falta.
+val propiedadesDeFirma = Properties().apply {
+    val archivo = rootProject.file("key.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+val hayFirmaDeRelease = propiedadesDeFirma.getProperty("storeFile") != null
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -29,12 +40,34 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hayFirmaDeRelease) {
+            create("release") {
+                storeFile = file(propiedadesDeFirma.getProperty("storeFile"))
+                storePassword = propiedadesDeFirma.getProperty("storePassword")
+                keyAlias = propiedadesDeFirma.getProperty("keyAlias")
+                keyPassword = propiedadesDeFirma.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Firmado con la clave de debug por ahora, para que
-            // `flutter run --release` funcione. El keystore de release todavia
-            // no existe: cuando exista, se apunta aqui y NUNCA se versiona.
-            signingConfig = signingConfigs.getByName("debug")
+            // Con la clave de release cuando está disponible; con la de debug
+            // cuando no, para que alguien que clone el repo pueda compilar sin
+            // pedirle la llave a nadie.
+            signingConfig = if (hayFirmaDeRelease) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+
+            // Ver proguard-rules.pro: el paquete de OCR menciona alfabetos que
+            // no están instalados y sin esto R8 no compila.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
