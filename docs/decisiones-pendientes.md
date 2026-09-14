@@ -449,3 +449,26 @@ rompe una junta.
 La duracion se pregunta en la unidad de la frecuencia: "Cuantas semanas",
 "Cuantas quincenas", "Cuantos meses". Nadie dice "doce turnos" en un mercado,
 dice "doce semanas".
+
+## D48. La sincronizacion detecta y reenvia lo que al servidor le falta
+
+- **Encontrado al verificar la migracion 0002.** En el servidor habia una junta y
+  sus participantes, pero **cero turnos y cero aportes**. Lo que paso: la vieja
+  restriccion rechazo los turnos, la cola los reintento cinco veces y los
+  descarto; despues, con la cola ya vacia, la descarga corrio y **borro tambien
+  la copia local** para dejarla igual que el servidor. Los datos se perdieron de
+  los dos lados sin que nadie se enterara.
+- Decision: antes de pisar lo local, `_descargar` compara ids y **reencola las
+  filas que el telefono tiene y el servidor no**, y esa vuelta no descarga nada.
+  Se manda con upsert, asi que reenviar algo que si estaba no rompe nada.
+- De paso, `sincronizar` ya no dice que descargo cuando la descarga se aborto.
+  Lo decia siempre, y un test nuevo lo cazo.
+- Lo que esto NO hace es resucitar lo ya perdido. La junta de prueba que quedo
+  sin calendario hay que borrarla a mano.
+
+## Migracion 0002: verificada el 13-sep
+
+Leonardo la ejecuto. Comprobado de dos formas:
+1. Insertar dos turnos para la misma persona: HTTP 201 (antes era imposible).
+2. Junta de prueba con 1 participante y 5 meses: los 5 turnos y los 5 aportes
+   llegaron al servidor, todos con el mismo participante_id.

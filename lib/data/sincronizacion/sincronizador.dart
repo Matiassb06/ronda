@@ -73,8 +73,14 @@ class Sincronizador {
         );
       }
 
-      await _descargar();
-      return ResultadoSync(empujados: empujados, pendientes: 0, descargo: true);
+      final descargo = await _descargar();
+      return ResultadoSync(
+        empujados: empujados,
+        // La descarga puede haberse abortado por reencolar filas que faltaban
+        // arriba, así que la cola vuelve a contarse en vez de darla por vacía.
+        pendientes: descargo ? 0 : (await _local.leerCola()).length,
+        descargo: descargo,
+      );
     } catch (e) {
       return ResultadoSync(
         empujados: 0,
@@ -166,7 +172,8 @@ class Sincronizador {
   /// Solo corre con la cola vacía, así que aquí Supabase es la verdad completa
   /// y se puede reescribir sin perder nada. Es más simple y más seguro que
   /// intentar mezclar fila por fila.
-  Future<void> _descargar() async {
+  /// Devuelve false si no llegó a descargar, para no decir que sí.
+  Future<bool> _descargar() async {
     final juntas = await _remoto.juntas();
     final ids = juntas.map((j) => j['id'] as String).toList();
 
@@ -174,11 +181,23 @@ class Sincronizador {
     final turnos = await _remoto.turnos(ids);
     final aportes = await _remoto.aportes(ids);
 
+    // Antes de pisar la base local con lo del servidor, mirar si el teléfono
+    // tiene filas que allá no están. Si las hay, se reencolan y NO se descarga
+    // esta vuelta: descargar borraría datos que nunca llegaron a subir.
+    //
+    // Pasa de verdad: un cambio que la base rechaza se descarta tras varios
+    // intentos, y desde entonces las dos copias quedan distintas para siempre
+    // sin que nadie se entere. Esto es la red que lo atrapa.
+    if (await _reencolarLoQueFalta(juntas, participantes, turnos, aportes) >
+        0) {
+      return false;
+    }
+
     // Se vuelve a comprobar aquí dentro, y no solo antes de llamar: entre la
     // comprobación y este punto pudo entrar una escritura local. Si la cola ya
     // no está vacía, se descarta la descarga: perder un refresco no cuesta
     // nada, pisar un pago marcado cuesta la confianza de la cabeza de junta.
-    if ((await _local.leerCola()).isNotEmpty) return;
+    if ((await _local.leerCola()).isNotEmpty) return false;
 
     await _local.transaction(() async {
       await _local.delete(_local.aportesLocales).go();
@@ -248,6 +267,124 @@ class Sincronizador {
         ]);
       });
     });
+
+    return true;
+  }
+
+  /// Reencola las filas locales que el servidor no tiene.
+  ///
+  /// Se manda como `insertar`, que sube con upsert: reenviar algo que sí estaba
+  /// no rompe nada. El orden importa y es el mismo de siempre: junta primero,
+  /// después su gente, después los turnos y al final los aportes.
+  Future<int> _reencolarLoQueFalta(
+    List<Map<String, dynamic>> juntasRemotas,
+    List<Map<String, dynamic>> participantesRemotos,
+    List<Map<String, dynamic>> turnosRemotos,
+    List<Map<String, dynamic>> aportesRemotos,
+  ) async {
+    Set<String> idsDe(List<Map<String, dynamic>> filas) =>
+        filas.map((f) => f['id'] as String).toSet();
+
+    final hayJuntas = idsDe(juntasRemotas);
+    final hayGente = idsDe(participantesRemotos);
+    final hayTurnos = idsDe(turnosRemotos);
+    final hayAportes = idsDe(aportesRemotos);
+
+    var reencolados = 0;
+
+    for (final j in await _local.verJuntas().first) {
+      if (hayJuntas.contains(j.id)) continue;
+      await _local.encolar(
+        tabla: 'juntas',
+        filaId: j.id,
+        operacion: 'insertar',
+        datos: jsonEncode({
+          'id': j.id,
+          'cabeza_id': j.cabezaId,
+          'nombre': j.nombre,
+          'codigo': j.codigo,
+          'monto_aporte_centavos': j.montoAporteCentavos,
+          'frecuencia': j.frecuencia,
+          'fecha_inicio': _comoFecha(j.fechaInicio),
+          'estado': j.estado,
+        }),
+      );
+      reencolados++;
+    }
+
+    for (final p in await _local.select(_local.participantesLocales).get()) {
+      if (hayGente.contains(p.id)) continue;
+      await _local.encolar(
+        tabla: 'participantes',
+        filaId: p.id,
+        operacion: 'insertar',
+        datos: jsonEncode({
+          'id': p.id,
+          'junta_id': p.juntaId,
+          'nombre': p.nombre,
+          'telefono': p.telefono,
+          'orden_turno': p.ordenTurno,
+          'activo': p.activo,
+        }),
+      );
+      reencolados++;
+    }
+
+    final turnosQueFaltan = [
+      for (final t in await _local.select(_local.turnosLocales).get())
+        if (!hayTurnos.contains(t.id))
+          {
+            'id': t.id,
+            'junta_id': t.juntaId,
+            'participante_id': t.participanteId,
+            'numero': t.numero,
+            'fecha_programada': _comoFecha(t.fechaProgramada),
+            'estado': t.estado,
+          },
+    ];
+    if (turnosQueFaltan.isNotEmpty) {
+      // De una sola vez: un calendario de doce personas son 12 turnos, y de a
+      // uno la cola tardaría una eternidad en vaciarse.
+      await _local.encolar(
+        tabla: 'turnos',
+        filaId: turnosQueFaltan.first['id']! as String,
+        operacion: 'insertar_varias',
+        datos: jsonEncode({'filas': turnosQueFaltan}),
+      );
+      reencolados += turnosQueFaltan.length;
+    }
+
+    final aportesQueFaltan = [
+      for (final a in await _local.select(_local.aportesLocales).get())
+        if (!hayAportes.contains(a.id))
+          {
+            'id': a.id,
+            'junta_id': a.juntaId,
+            'turno_id': a.turnoId,
+            'participante_id': a.participanteId,
+            'monto_centavos': a.montoCentavos,
+            'estado': a.estado,
+            'pagado_en': a.pagadoEn?.toUtc().toIso8601String(),
+            'voucher_path': a.voucherPath,
+          },
+    ];
+    if (aportesQueFaltan.isNotEmpty) {
+      await _local.encolar(
+        tabla: 'aportes',
+        filaId: aportesQueFaltan.first['id']! as String,
+        operacion: 'insertar_varias',
+        datos: jsonEncode({'filas': aportesQueFaltan}),
+      );
+      reencolados += aportesQueFaltan.length;
+    }
+
+    return reencolados;
+  }
+
+  static String _comoFecha(DateTime f) {
+    final mes = f.month.toString().padLeft(2, '0');
+    final dia = f.day.toString().padLeft(2, '0');
+    return '${f.year}-$mes-$dia';
   }
 
   static DateTime _instante(Object? valor) {

@@ -228,6 +228,88 @@ void main() {
     });
   });
 
+  group('lo que el servidor perdió se vuelve a subir', () {
+    // Paso de verdad: una restricción de Postgres rechazó los turnos, la cola
+    // los descartó tras varios intentos, y el teléfono quedó con el calendario
+    // mientras el servidor no tenía ninguno. Sin esta red, esa diferencia se
+    // queda para siempre y nadie se entera hasta contar el dinero.
+    test('una junta local que el servidor no tiene se reencola', () async {
+      await local
+          .into(local.juntasLocales)
+          .insert(
+            JuntasLocalesCompanion.insert(
+              id: 'j1',
+              cabezaId: 'cabeza-1',
+              nombre: 'Junta del mercado',
+              codigo: 'ABC234',
+              montoAporteCentavos: 5000,
+              frecuencia: 'semanal',
+              fechaInicio: DateTime(2026, 9, 14),
+              estado: 'activa',
+              actualizadoEn: DateTime.now(),
+            ),
+          );
+
+      // El servidor no la tiene.
+      remoto.juntasRemotas = [];
+
+      final r = await sync.sincronizar();
+
+      expect(r.descargo, isFalse, reason: 'no se pisa lo local');
+      expect(await local.leerCola(), hasLength(1));
+      expect(await local.verJuntas().first, hasLength(1));
+    });
+
+    test('y en la vuelta siguiente sube', () async {
+      await local
+          .into(local.juntasLocales)
+          .insert(
+            JuntasLocalesCompanion.insert(
+              id: 'j1',
+              cabezaId: 'cabeza-1',
+              nombre: 'Junta del mercado',
+              codigo: 'ABC234',
+              montoAporteCentavos: 5000,
+              frecuencia: 'semanal',
+              fechaInicio: DateTime(2026, 9, 14),
+              estado: 'activa',
+              actualizadoEn: DateTime.now(),
+            ),
+          );
+      remoto.juntasRemotas = [];
+
+      await sync.sincronizar();
+      expect(remoto.aplicados, isEmpty);
+
+      // Ahora el servidor ya la tiene, así que la descarga puede correr.
+      remoto.juntasRemotas = [
+        {
+          'id': 'j1',
+          'cabeza_id': 'cabeza-1',
+          'nombre': 'Junta del mercado',
+          'codigo': 'ABC234',
+          'monto_aporte_centavos': 5000,
+          'frecuencia': 'semanal',
+          'fecha_inicio': '2026-09-14',
+          'estado': 'activa',
+          'actualizado_en': '2026-09-13T20:00:00Z',
+        },
+      ];
+      final r = await sync.sincronizar();
+
+      expect(remoto.aplicados, contains('insertar:juntas:j1'));
+      expect(r.descargo, isTrue);
+    });
+
+    test('si el servidor ya tiene todo, no reencola nada', () async {
+      remoto.juntasRemotas = [];
+      final r = await sync.sincronizar();
+
+      expect(await local.leerCola(), isEmpty);
+      expect(r.descargo, isTrue);
+    });
+  });
+
   group('sin sesión', () {
     test('no intenta nada', () async {
       final sinSesion = Sincronizador(local, _SinSesion());
